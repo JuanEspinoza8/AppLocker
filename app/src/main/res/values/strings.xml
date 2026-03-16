@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AppLocker</string>
+    <string name="accessibility_desc">Servicio necesario para detectar y bloquear aplicaciones restringidas.</string>
 </resources>
