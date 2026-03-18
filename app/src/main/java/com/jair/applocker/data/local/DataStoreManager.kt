@@ -5,69 +5,76 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Calendar
 
-// Inicializamos DataStore (es como crear el archivo de base de datos)
 private val Context.dataStore by preferencesDataStore(name = "applocker_prefs")
 
 class DataStoreManager(private val context: Context) {
 
-    // Definimos las "claves" (keys) para guardar cada dato, como si fuera un JSON
     companion object {
         val LOCKED_APPS = stringSetPreferencesKey("locked_apps")
         val LOCKED_DAYS = stringSetPreferencesKey("locked_days")
         val LOCK_START_TIME = stringPreferencesKey("lock_start_time")
         val LOCK_END_TIME = stringPreferencesKey("lock_end_time")
 
+        // Mantener la ventana de edición por si acaso, aunque usaremos el PIN
         val EDIT_DAY = intPreferencesKey("edit_day")
         val EDIT_START_TIME = stringPreferencesKey("edit_start_time")
         val EDIT_END_TIME = stringPreferencesKey("edit_end_time")
 
-        val IS_SYSTEM_ACTIVE = booleanPreferencesKey("is_system_active")
+        // --- NUEVOS: LÓGICA DE VACACIONES ---
+        // Guardamos hasta qué hora exacta (en milisegundos) dura el franco
+        val HOLIDAY_UNTIL_TIME = longPreferencesKey("holiday_until_time")
+        // Guardamos los pines que ya usó para bloquearlos
+        val USED_PINS = stringSetPreferencesKey("used_pins")
     }
 
-    // --- FUNCIONES PARA GUARDAR DATOS (Setters) ---
-    // Usamos 'suspend' porque escribir en disco toma tiempo y no debe congelar la UI
-
-    suspend fun saveLockedApps(packageNames: Set<String>) {
-        context.dataStore.edit { prefs -> prefs[LOCKED_APPS] = packageNames }
-    }
-
+    // Setters
+    suspend fun saveLockedApps(packageNames: Set<String>) { context.dataStore.edit { it[LOCKED_APPS] = packageNames } }
     suspend fun saveLockSchedule(days: Set<Int>, start: String, end: String) {
-        context.dataStore.edit { prefs ->
-            // Convertimos el Set<Int> a Set<String> porque DataStore guarda Strings
-            prefs[LOCKED_DAYS] = days.map { it.toString() }.toSet()
-            prefs[LOCK_START_TIME] = start
-            prefs[LOCK_END_TIME] = end
+        context.dataStore.edit {
+            it[LOCKED_DAYS] = days.map { it.toString() }.toSet()
+            it[LOCK_START_TIME] = start
+            it[LOCK_END_TIME] = end
         }
     }
-
     suspend fun saveEditWindow(day: Int?, start: String, end: String) {
-        context.dataStore.edit { prefs ->
-            if (day != null) {
-                prefs[EDIT_DAY] = day
-            } else {
-                prefs.remove(EDIT_DAY)
-            }
-            prefs[EDIT_START_TIME] = start
-            prefs[EDIT_END_TIME] = end
+        context.dataStore.edit {
+            if (day != null) it[EDIT_DAY] = day else it.remove(EDIT_DAY)
+            it[EDIT_START_TIME] = start
+            it[EDIT_END_TIME] = end
         }
     }
 
-    suspend fun setSystemActive(isActive: Boolean) {
-        context.dataStore.edit { prefs -> prefs[IS_SYSTEM_ACTIVE] = isActive }
+    // --- NUEVOS SETTERS ---
+    suspend fun activateHolidayMode() {
+        context.dataStore.edit { prefs ->
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, 1) // Sumamos 24 horas exactas a partir de ahora
+            prefs[HOLIDAY_UNTIL_TIME] = calendar.timeInMillis
+        }
     }
 
-    // --- FUNCIONES PARA LEER DATOS (Getters reactivos) ---
-    // Flow es un flujo de datos constante: si la base de datos cambia,
-    // la interfaz o el servicio se actualizan automáticamente al instante.
+    suspend fun markPinAsUsed(pin: String) {
+        context.dataStore.edit { prefs ->
+            val currentUsed = prefs[USED_PINS] ?: emptySet()
+            prefs[USED_PINS] = currentUsed + pin
+        }
+    }
 
+    // Getters Reactivos (Flows)
     val lockedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_APPS] ?: emptySet() }
-
-    val isSystemActiveFlow: Flow<Boolean> = context.dataStore.data.map { it[IS_SYSTEM_ACTIVE] ?: false }
-
     val lockedDaysFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_DAYS] ?: emptySet() }
     val lockStartTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_START_TIME] ?: "00:00" }
     val lockEndTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_END_TIME] ?: "00:00" }
 
-    // (Luego agregaremos los flujos para leer los horarios exactos cuando armemos la lógica del bloqueo)
+    val editDayFlow: Flow<Int?> = context.dataStore.data.map { it[EDIT_DAY] }
+    val editStartTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_START_TIME] ?: "00:00" }
+    val editEndTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_END_TIME] ?: "00:00" }
+
+    // --- NUEVOS GETTERS ---
+    // Nos devuelve hasta qué hora duran las vacaciones
+    val holidayUntilFlow: Flow<Long> = context.dataStore.data.map { it[HOLIDAY_UNTIL_TIME] ?: 0L }
+    // Nos devuelve la lista negra de pines usados
+    val usedPinsFlow: Flow<Set<String>> = context.dataStore.data.map { it[USED_PINS] ?: emptySet() }
 }
