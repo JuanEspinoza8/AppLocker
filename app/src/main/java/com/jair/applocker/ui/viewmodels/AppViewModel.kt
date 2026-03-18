@@ -17,8 +17,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AppRepository(application)
     private val dataStoreManager = DataStoreManager(application)
 
-    // --- DATOS MAESTROS (NO TOCAR) ---
-    // Esta es la lista que generamos. La app necesita saber cuáles son válidos.
+    // Lista maestra de 100 PINes (No tocar)
     private val masterPins = setOf(
         "1408", "2731", "3954", "4170", "5092", "6315", "7538", "8761", "9984", "1207",
         "2430", "3653", "4876", "5190", "6413", "7636", "8859", "9082", "1305", "2528",
@@ -32,17 +31,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "1189", "2312", "3535", "4758", "5081", "6304", "7527", "8750", "9973", "1296"
     )
 
-    // Variables internas de control
     private var usedPins: Set<String> = emptySet()
     private var holidayUntil: Long = 0L
 
-    // Estados para la UI
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    // --- ESTADOS DE LA UI ---
     private val _lockedDays = MutableStateFlow<Set<Int>>(emptySet())
     val lockedDays: StateFlow<Set<Int>> = _lockedDays.asStateFlow()
 
@@ -52,7 +50,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _lockEndTime = MutableStateFlow("00:00")
     val lockEndTime: StateFlow<String> = _lockEndTime.asStateFlow()
 
-    // El estado definitivo que bloquea la pantalla
+    // Ventana de Edición
+    private val _editDay = MutableStateFlow<Int?>(null)
+    val editDay: StateFlow<Int?> = _editDay.asStateFlow()
+
+    private val _editStartTime = MutableStateFlow("00:00")
+    val editStartTime: StateFlow<String> = _editStartTime.asStateFlow()
+
+    private val _editEndTime = MutableStateFlow("00:00")
+    val editEndTime: StateFlow<String> = _editEndTime.asStateFlow()
+
+    private var internalEditDay: Int? = null
+    private var internalEditStart: String = "00:00"
+    private var internalEditEnd: String = "00:00"
+
     private val _isEditable = MutableStateFlow(true)
     val isEditable: StateFlow<Boolean> = _isEditable.asStateFlow()
 
@@ -75,64 +86,86 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadSavedConfigAndEvaluate() {
-        // Cargar Horarios de Bloqueo (UI estática)
-        viewModelScope.launch { dataStoreManager.lockedDaysFlow.collect { daysStr -> _lockedDays.value = daysStr.mapNotNull { it.toIntOrNull() }.toSet() } }
-        viewModelScope.launch { dataStoreManager.lockStartTimeFlow.collect { _lockStartTime.value = it } }
-        viewModelScope.launch { dataStoreManager.lockEndTimeFlow.collect { _lockEndTime.value = it } }
-
-        // --- LÓGICA DE EVALUACIÓN DEL CANDADO (NUEVA) ---
-        // Escuchamos los pines usados y el tiempo de vacaciones al mismo tiempo
         viewModelScope.launch {
-            dataStoreManager.usedPinsFlow.collect { usedPins = it }
-        }
-
-        viewModelScope.launch {
-            dataStoreManager.holidayUntilFlow.collect { until ->
-                holidayUntil = until
+            dataStoreManager.lockedDaysFlow.collect { daysStr ->
+                _lockedDays.value = daysStr.mapNotNull { it.toIntOrNull() }.toSet()
                 evaluateLockStatus()
             }
         }
+        viewModelScope.launch { dataStoreManager.lockStartTimeFlow.collect { _lockStartTime.value = it } }
+        viewModelScope.launch { dataStoreManager.lockEndTimeFlow.collect { _lockEndTime.value = it } }
+
+        // Recolectar Ventana de Edición
+        viewModelScope.launch { dataStoreManager.editDayFlow.collect { _editDay.value = it; internalEditDay = it; evaluateLockStatus() } }
+        viewModelScope.launch { dataStoreManager.editStartTimeFlow.collect { _editStartTime.value = it; internalEditStart = it; evaluateLockStatus() } }
+        viewModelScope.launch { dataStoreManager.editEndTimeFlow.collect { _editEndTime.value = it; internalEditEnd = it; evaluateLockStatus() } }
+
+        // Recolectar Vacaciones
+        viewModelScope.launch { dataStoreManager.usedPinsFlow.collect { usedPins = it } }
+        viewModelScope.launch { dataStoreManager.holidayUntilFlow.collect { until -> holidayUntil = until; evaluateLockStatus() } }
     }
 
-    // El núcleo de la decisión: ¿Bloqueamos la app AppLocker?
     private fun evaluateLockStatus() {
         val currentTime = Calendar.getInstance().timeInMillis
 
-        // REGLA 1: Si estamos dentro de las 24hs de franco, la app SIEMPRE es editable.
+        // REGLA 0: Si está recién instalada o no hay días configurados
+        if (_lockedDays.value.isEmpty()) {
+            _isEditable.value = true
+            return
+        }
+
+        // REGLA 1: Franco activo (PIN)
         if (currentTime < holidayUntil) {
             _isEditable.value = true
             return
         }
 
-        // REGLA 2: Si expiró el franco, la app se vuelve INMODIFICABLE por defecto.
-        // (Borramos la lógica de la ventana de edición anterior por simplicidad y rigor)
+        // REGLA 2: Ventana de edición semanal
+        if (internalEditDay != null) {
+            val calendar = Calendar.getInstance()
+            val currentDayMapped = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 7 else calendar.get(Calendar.DAY_OF_WEEK) - 1
+
+            if (currentDayMapped == internalEditDay) {
+                val currentTotalMinutes = (calendar.get(Calendar.HOUR_OF_DAY) * 60) + calendar.get(Calendar.MINUTE)
+                val startParts = internalEditStart.split(":")
+                val startTotalMinutes = (startParts[0].toInt() * 60) + startParts[1].toInt()
+                val endParts = internalEditEnd.split(":")
+                val endTotalMinutes = (endParts[0].toInt() * 60) + endParts[1].toInt()
+
+                val inEditWindow = if (startTotalMinutes <= endTotalMinutes) {
+                    currentTotalMinutes in startTotalMinutes..endTotalMinutes
+                } else {
+                    currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes
+                }
+
+                if (inEditWindow) {
+                    _isEditable.value = true
+                    return
+                }
+            }
+        }
+
+        // Si fallan todas las reglas, se bloquea la app
         _isEditable.value = false
     }
 
-    // --- NUEVA FUNCIÓN: INTENTAR ACTIVAR FRANCO CON PIN ---
-    // Devuelve 'true' si el PIN fue válido y activó el franco, 'false' si falló.
     fun attemptActivateHoliday(pin: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-            // 1. Verificar si el PIN existe en la lista maestra
             if (!masterPins.contains(pin)) {
                 onResult(false, "PIN inválido. Pedile uno a tu amigo.")
                 return@launch
             }
-
-            // 2. Verificar si el PIN ya fue usado
             if (usedPins.contains(pin)) {
                 onResult(false, "Este PIN ya fue utilizado. Pedí otro.")
                 return@launch
             }
 
-            // 3. PIN Válido y Nuevo: Activar magía
-            dataStoreManager.markPinAsUsed(pin) // Quemamos el PIN
-            dataStoreManager.activateHolidayMode() // Activamos 24hs de franco
+            dataStoreManager.markPinAsUsed(pin)
+            dataStoreManager.activateHolidayMode()
             onResult(true, "¡PIN Aceptado! Franco activado por 24 horas.")
         }
     }
 
-    // Funciones de guardado estándar
     fun toggleAppLock(packageName: String) {
         viewModelScope.launch {
             val currentLocked = _installedApps.value.filter { it.isLocked }.map { it.packageName }.toMutableSet()
@@ -143,5 +176,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveLockConfig(days: Set<Int>, start: String, end: String) {
         viewModelScope.launch { dataStoreManager.saveLockSchedule(days, start, end) }
+    }
+
+    fun saveEditWindowConfig(day: Int?, start: String, end: String) {
+        viewModelScope.launch { dataStoreManager.saveEditWindow(day, start, end) }
     }
 }

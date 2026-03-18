@@ -24,7 +24,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -43,12 +42,10 @@ import java.util.Calendar
 
 // --- COLORES PREMIER AMOLED / NEÓN ---
 val PureBlack = Color(0xFF000000)
-val NeonBlue = Color(0xFF00E5FF) // Un azul eléctrico, moderno y vibrante
-val GlassWhite = Color(0x1AFFFFFF) // Blanco al 10%, crea efecto cristal
-val GlassWhitePressed = Color(0x33FFFFFF) // Blanco al 20% para clicks
-val NeonRed = Color(0xFFFF1744) // Rojo vibrante para alertas
+val NeonBlue = Color(0xFF00E5FF)
+val GlassWhite = Color(0x1AFFFFFF)
+val NeonRed = Color(0xFFFF1744)
 
-// --- FUNCIONES DE PERMISOS ---
 fun requestBatteryExemption(context: Context) {
     val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
@@ -69,8 +66,6 @@ fun requestDeviceAdmin(context: Context) {
     }
 }
 
-// --- INTERFAZ VISUAL AMOLED PREMIUM ---
-
 @Composable
 fun HomeScreen(
     viewModel: AppViewModel,
@@ -83,17 +78,23 @@ fun HomeScreen(
 
     var isBatteryExempt by remember { mutableStateOf(false) }
     var isAdminActive by remember { mutableStateOf(false) }
-
-    // Estado para mostrar el diálogo del PIN
     var showPinDialog by remember { mutableStateOf(false) }
 
+    // Obtenemos los datos desde el ViewModel
     val savedLockedDays by viewModel.lockedDays.collectAsState()
     val savedLockStart by viewModel.lockStartTime.collectAsState()
     val savedLockEnd by viewModel.lockEndTime.collectAsState()
+    val savedEditDay by viewModel.editDay.collectAsState()
+    val savedEditStart by viewModel.editStartTime.collectAsState()
+    val savedEditEnd by viewModel.editEndTime.collectAsState()
 
+    // Variables locales
     var selectedDays by remember(savedLockedDays) { mutableStateOf(savedLockedDays) }
     var lockStartTime by remember(savedLockStart) { mutableStateOf(savedLockStart) }
     var lockEndTime by remember(savedLockEnd) { mutableStateOf(savedLockEnd) }
+    var editWindowDay by remember(savedEditDay) { mutableStateOf(savedEditDay) }
+    var editStartTime by remember(savedEditStart) { mutableStateOf(savedEditStart) }
+    var editEndTime by remember(savedEditEnd) { mutableStateOf(savedEditEnd) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -108,14 +109,13 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // --- DIÁLOGO FLOTANTE PARA EL PIN DE VACACIONES ---
     if (showPinDialog) {
         var pinInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showPinDialog = false },
-            containerColor = Color(0xFF121212), // Negro azulado muy oscuro para el diálogo
+            containerColor = Color(0xFF121212),
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.border(1.dp, NeonBlue, RoundedCornerShape(24.dp)), // Borde neón
+            modifier = Modifier.border(1.dp, NeonBlue, RoundedCornerShape(24.dp)),
             icon = { Icon(Icons.Default.VpnKey, contentDescription = null, tint = NeonBlue) },
             title = { Text("Activar Modo Vacaciones", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
@@ -129,10 +129,8 @@ fun HomeScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NeonBlue,
-                            unfocusedBorderColor = GlassWhite,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
+                            focusedBorderColor = NeonBlue, unfocusedBorderColor = GlassWhite,
+                            focusedTextColor = Color.White, unfocusedTextColor = Color.White
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -143,77 +141,54 @@ fun HomeScreen(
                     if (pinInput.length == 4) {
                         viewModel.attemptActivateHoliday(pinInput) { success, message ->
                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                            if (success) showPinDialog = false // Cerramos si tuvo éxito
+                            if (success) showPinDialog = false
                         }
-                    } else {
-                        Toast.makeText(context, "El PIN debe tener 4 números.", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("ACTIVAR", color = NeonBlue, fontWeight = FontWeight.Black)
-                }
+                    } else { Toast.makeText(context, "El PIN debe tener 4 números.", Toast.LENGTH_SHORT).show() }
+                }) { Text("ACTIVAR", color = NeonBlue, fontWeight = FontWeight.Black) }
             },
             dismissButton = {
-                TextButton(onClick = { showPinDialog = false }) {
-                    Text("CANCELAR", color = Color.Gray)
-                }
+                TextButton(onClick = { showPinDialog = false }) { Text("CANCELAR", color = Color.Gray) }
             }
         )
     }
 
-    // --- CONTENIDO PRINCIPAL SOBRE FONDO NEGRO PURO ---
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PureBlack) // FONDO NEGRO PURO (AMOLED)
-            .padding(16.dp)
-            .verticalScroll(scrollState),
+        modifier = Modifier.fillMaxSize().background(PureBlack).padding(16.dp).verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // Cabecera Neón Moderna
         Spacer(modifier = Modifier.height(24.dp))
         Icon(imageVector = Icons.Default.Shield, contentDescription = null, modifier = Modifier.size(64.dp), tint = NeonBlue)
         Text(
-            text = "APPLOCKER PREMIER",
+            text = "APPLOCKER",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = Color.White, // Título en blanco puro
+            color = Color.White,
             letterSpacing = 2.sp,
             modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
         )
 
-        // Cartel de Bloqueo Estilo "Glassmorphism"
         if (!isEditable) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(GlassWhite) // Fondo transparente blanco
-                    .border(1.dp, NeonRed, RoundedCornerShape(20.dp)) // Borde rojo neón
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp).clip(RoundedCornerShape(20.dp))
+                    .background(GlassWhite).border(1.dp, NeonRed, RoundedCornerShape(20.dp))
             ) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.HourglassDisabled, contentDescription = null, tint = NeonRed, modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("SISTEMA BLINDADO", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                        Text(
-                            text = "No podés modificar reglas. Si necesitás franco, usá el botón de vacaciones.",
-                            color = Color.LightGray,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp
-                        )
+                        Text("Esperá a tu ventana de edición semanal o usá el botón de vacaciones.", color = Color.LightGray, fontSize = 13.sp, lineHeight = 18.sp)
                     }
                 }
             }
         }
 
-        // --- SECCIÓN UNIFICADA DE CONFIGURACIÓN ---
+        // --- SECCIÓN 1: HORARIO DE BLOQUEO ---
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.SettingsPower, contentDescription = null, tint = NeonBlue)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Horario Estricto de Bloqueo", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                Text("1. Horario Estricto de Bloqueo", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
             }
             Divider(modifier = Modifier.padding(vertical = 16.dp), color = GlassWhite)
 
@@ -230,40 +205,47 @@ fun HomeScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- SECCIÓN 2: VENTANA DE EDICIÓN ---
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Edit, contentDescription = null, tint = NeonBlue)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("2. Ventana de Edición Semanal", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+            }
+            Divider(modifier = Modifier.padding(vertical = 16.dp), color = GlassWhite)
+
+            Text("Único día permitido para modificar reglas:", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+            Spacer(modifier = Modifier.height(12.dp))
+            DaysSelector(editWindowDay?.let { setOf(it) } ?: emptySet(), isEditable) { day ->
+                editWindowDay = if (editWindowDay == day) null else day
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                TimePickerButton("Inicio", editStartTime, isEditable, Modifier.weight(1f)) { editStartTime = it }
+                TimePickerButton("Fin", editEndTime, isEditable, Modifier.weight(1f)) { editEndTime = it }
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- SECCIÓN DE PERMISOS CON FEEDBACK VISUAL PREMIUM ---
         Text("ESTADO DE PROTECCIÓN", fontWeight = FontWeight.Black, color = Color.Gray, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.align(Alignment.Start).padding(start = 8.dp, bottom = 12.dp))
-
-        PermissionGlassButton(
-            title = "Evitar Cierre por Batería",
-            isGranted = isBatteryExempt,
-            isEnabled = isEditable && !isBatteryExempt,
-            onClick = { requestBatteryExemption(context) }
-        )
-
+        PermissionGlassButton("Evitar Cierre por Batería", isBatteryExempt, isEditable && !isBatteryExempt) { requestBatteryExemption(context) }
         Spacer(modifier = Modifier.height(12.dp))
-
-        PermissionGlassButton(
-            title = "Escudo Anti-Desinstalación",
-            isGranted = isAdminActive,
-            isEnabled = isEditable && !isAdminActive,
-            onClick = { requestDeviceAdmin(context) }
-        )
+        PermissionGlassButton("Escudo Anti-Desinstalación", isAdminActive, isEditable && !isAdminActive) { requestDeviceAdmin(context) }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- BOTONES DE ACCIÓN PRINCIPALES ---
-
-        // El Botón de Vacaciones (Siempre habilitado, su "salida")
         OutlinedButton(
             onClick = { showPinDialog = true },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
-            border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(NeonBlue, Color(0x3300E5FF)))) // Borde degradado neón
+            border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(NeonBlue, Color(0x3300E5FF))))
         ) {
-            Icon(Icons.Default.BeachAccess, contentDescription = null)
+            Icon(Icons.Default.VpnKey, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text("PEDIR FRANCO (VACACIONES)", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
@@ -276,7 +258,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth().height(56.dp).background(GlassWhite, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White, disabledContentColor = Color.Gray),
-            border = ButtonDefaults.outlinedButtonBorder.copy(width = 0.dp) // Sin borde, efecto botón de cristal puro
+            border = ButtonDefaults.outlinedButtonBorder.copy(width = 0.dp)
         ) {
             Icon(Icons.Default.AppBlocking, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
@@ -285,10 +267,10 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón Guardar - Neón Sólido
         Button(
             onClick = {
                 viewModel.saveLockConfig(selectedDays, lockStartTime, lockEndTime)
+                viewModel.saveEditWindowConfig(editWindowDay, editStartTime, editEndTime)
                 Toast.makeText(context, "¡Reglas guardadas y activadas! 🛡️", Toast.LENGTH_SHORT).show()
             },
             enabled = isEditable,
@@ -305,20 +287,10 @@ fun HomeScreen(
     }
 }
 
-// --- COMPONENTES DE CRISTAL (Glassmorphism) ---
-
 @Composable
 fun GlassCard(content: @Composable ColumnScope.() -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(GlassWhite)
-            .border(1.dp, Color(0x0DFFFFFF), RoundedCornerShape(24.dp)) // Borde casi invisible blanco
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            content()
-        }
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(GlassWhite).border(1.dp, Color(0x0DFFFFFF), RoundedCornerShape(24.dp))) {
+        Column(modifier = Modifier.padding(24.dp)) { content() }
     }
 }
 
@@ -328,19 +300,8 @@ fun PermissionGlassButton(title: String, isGranted: Boolean, isEnabled: Boolean,
     val bgColor = if (isGranted) Color(0x1A00C853) else GlassWhite
     val icon = if (isGranted) Icons.Default.VerifiedUser else Icons.Default.NewReleases
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(bgColor)
-            .clickable(enabled = isEnabled) { onClick() }
-            .border(1.dp, if (isGranted) Color(0x3300C853) else Color.Transparent, RoundedCornerShape(16.dp))
-    ) {
-        Row(
-            modifier = Modifier.padding(18.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(bgColor).clickable(enabled = isEnabled) { onClick() }.border(1.dp, if (isGranted) Color(0x3300C853) else Color.Transparent, RoundedCornerShape(16.dp))) {
+        Row(modifier = Modifier.padding(18.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(text = title, color = if (isGranted) Color.White else contentColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             Icon(imageVector = icon, contentDescription = null, tint = contentColor)
         }
@@ -353,24 +314,9 @@ fun DaysSelector(selectedDays: Set<Int>, isEditable: Boolean, onDayClick: (Int) 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         days.forEachIndexed { index, day ->
             val isSelected = selectedDays.contains(index + 1)
-            // Degradado neón si está seleccionado, cristal si no
-            val modifier = if (isSelected) {
-                Modifier.background(Brush.radialGradient(listOf(NeonBlue, Color(0x6600E5FF))), CircleShape)
-            } else {
-                Modifier.background(GlassWhite, CircleShape)
-            }
-
+            val modifier = if (isSelected) Modifier.background(Brush.radialGradient(listOf(NeonBlue, Color(0x6600E5FF))), CircleShape) else Modifier.background(GlassWhite, CircleShape)
             val textColor = if (isSelected) PureBlack else if (isEditable) Color.White else Color.Gray
-
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .then(modifier)
-                    .clickable(enabled = isEditable) { onDayClick(index + 1) }
-                    .border(1.dp, if (isSelected) NeonBlue else Color.Transparent, CircleShape)
-            ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(44.dp).clip(CircleShape).then(modifier).clickable(enabled = isEditable) { onDayClick(index + 1) }.border(1.dp, if (isSelected) NeonBlue else Color.Transparent, CircleShape)) {
                 Text(text = day, color = textColor, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
         }
@@ -380,20 +326,10 @@ fun DaysSelector(selectedDays: Set<Int>, isEditable: Boolean, onDayClick: (Int) 
 @Composable
 fun TimePickerButton(label: String, timeText: String, isEditable: Boolean, modifier: Modifier = Modifier, onTimeSelected: (String) -> Unit) {
     val context = LocalContext.current
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .height(50.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(GlassWhite)
-            .clickable(enabled = isEditable) {
-                val calendar = Calendar.getInstance()
-                TimePickerDialog(context, { _, hourOfDay, minute ->
-                    onTimeSelected(String.format("%02d:%02d", hourOfDay, minute))
-                }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
-            }
-            .border(1.dp, if (isEditable) Color(0x1AFFFFFF) else Color.Transparent, RoundedCornerShape(14.dp))
-    ) {
+    Box(contentAlignment = Alignment.Center, modifier = modifier.height(50.dp).clip(RoundedCornerShape(14.dp)).background(GlassWhite).clickable(enabled = isEditable) {
+        val calendar = Calendar.getInstance()
+        TimePickerDialog(context, { _, h, m -> onTimeSelected(String.format("%02d:%02d", h, m)) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
+    }.border(1.dp, if (isEditable) Color(0x1AFFFFFF) else Color.Transparent, RoundedCornerShape(14.dp))) {
         Text("$label: $timeText", color = if (isEditable) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
     }
 }
