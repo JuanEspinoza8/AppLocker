@@ -8,10 +8,14 @@ import com.jair.applocker.data.repository.AppRepository
 import com.jair.applocker.data.repository.LockSettingsRepository
 import com.jair.applocker.domain.LockPolicy
 import com.jair.applocker.domain.TimeFormat
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -93,10 +97,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _editDay.value = settings.editDay
                 _editStartTime.value = TimeFormat.format(settings.editStart)
                 _editEndTime.value = TimeFormat.format(settings.editEnd)
-                _isEditable.value = lockPolicy.isEditable(settings)
             }
         }
+        // Se recalcula con cada cambio de configuración y con el paso del tiempo, para que
+        // la edición se cierre sola al terminar la ventana o el franco
+        viewModelScope.launch {
+            combine(settingsRepository.settings, minuteTicker()) { settings, _ -> lockPolicy.isEditable(settings) }
+                .distinctUntilChanged()
+                .collect { _isEditable.value = it }
+        }
         viewModelScope.launch { settingsRepository.usedPins.collect { usedPins = it } }
+    }
+
+    /** Emite al suscribirse y después al comienzo de cada minuto. */
+    private fun minuteTicker(): Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(MINUTE_MILLIS - System.currentTimeMillis() % MINUTE_MILLIS)
+        }
     }
 
     fun attemptActivateHoliday(pin: String, onResult: (Boolean, String) -> Unit) {
@@ -133,5 +151,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsRepository.saveEditWindow(day, TimeFormat.parse(start), TimeFormat.parse(end))
         }
+    }
+
+    private companion object {
+        const val MINUTE_MILLIS = 60_000L
     }
 }
