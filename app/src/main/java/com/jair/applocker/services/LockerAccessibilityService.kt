@@ -26,12 +26,12 @@ class LockerAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString() ?: return
+            val eventPackage = event.packageName?.toString() ?: return
             val currentSettings = settings ?: return
 
-            if (packageName == "com.jair.applocker" || packageName.contains("systemui")) return
+            if (eventPackage == packageName || eventPackage.contains("systemui")) return
 
-            if (lockPolicy.shouldBlock(packageName, currentSettings)) {
+            if (lockPolicy.shouldBlock(eventPackage, currentSettings)) {
                 launchLockScreen()
             }
         }
