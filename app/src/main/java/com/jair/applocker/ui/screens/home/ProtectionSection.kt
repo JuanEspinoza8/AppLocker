@@ -13,12 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.jair.applocker.R
 import com.jair.applocker.receivers.AdminReceiver
 import com.jair.applocker.ui.components.PermissionGlassButton
 
@@ -48,10 +50,10 @@ fun ProtectionSection(isEditable: Boolean) {
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("ESTADO DE PROTECCIÓN", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.padding(start = 8.dp, bottom = 12.dp))
-        PermissionGlassButton("Evitar Cierre por Batería", isBatteryExempt, isEditable && !isBatteryExempt) { requestBatteryExemption(context) }
+        Text(stringResource(R.string.protection_title), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.padding(start = 8.dp, bottom = 12.dp))
+        PermissionGlassButton(stringResource(R.string.protection_battery), isBatteryExempt, isEditable && !isBatteryExempt) { requestBatteryExemption(context) }
         Spacer(modifier = Modifier.height(12.dp))
-        PermissionGlassButton("Escudo Anti-Desinstalación", isAdminActive, isEditable && !isAdminActive) { requestDeviceAdmin(context) }
+        PermissionGlassButton(stringResource(R.string.protection_admin), isAdminActive, isEditable && !isAdminActive) { requestDeviceAdmin(context) }
     }
 }
 
@@ -69,7 +71,7 @@ private fun requestDeviceAdmin(context: Context) {
     if (!dpm.isAdminActive(compName)) {
         val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
             putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, compName)
-            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Protección esencial.")
+            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, context.getString(R.string.device_admin_explanation))
         }
         context.startActivity(intent)
     }

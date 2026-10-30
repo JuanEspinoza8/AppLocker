@@ -8,10 +8,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jair.applocker.R
 
 @Composable
 fun LockScreenOverlay(onGoHomeClick: () -> Unit) {
@@ -25,7 +27,7 @@ fun LockScreenOverlay(onGoHomeClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Default.Warning,
-            contentDescription = "Alerta",
+            contentDescription = stringResource(R.string.lock_screen_icon_description),
             tint = colors.onErrorContainer,
             modifier = Modifier.size(120.dp)
         )
@@ -33,7 +35,7 @@ fun LockScreenOverlay(onGoHomeClick: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "¡APLICACIÓN BLOQUEADA!",
+            text = stringResource(R.string.lock_screen_title),
             color = colors.onErrorContainer,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
@@ -42,7 +44,7 @@ fun LockScreenOverlay(onGoHomeClick: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Estás en horario estricto.\nNo hay vuelta atrás, volvé a tus tareas.",
+            text = stringResource(R.string.lock_screen_message),
             color = colors.onErrorContainer,
             fontSize = 18.sp,
             textAlign = TextAlign.Center,
@@ -59,7 +61,7 @@ fun LockScreenOverlay(onGoHomeClick: () -> Unit) {
             ),
             modifier = Modifier.height(50.dp)
         ) {
-            Text("Ir a la pantalla de Inicio", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.lock_screen_go_home), fontWeight = FontWeight.Bold)
         }
     }
 }

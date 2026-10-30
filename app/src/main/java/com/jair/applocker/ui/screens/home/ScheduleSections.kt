@@ -9,7 +9,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.jair.applocker.R
 import com.jair.applocker.ui.components.DaysSelector
 import com.jair.applocker.ui.components.GlassCard
 import com.jair.applocker.ui.components.SectionHeader
@@ -29,8 +31,8 @@ fun LockScheduleSection(
 ) {
     ScheduleCard(
         icon = Icons.Default.SettingsPower,
-        title = "1. Horario Estricto de Bloqueo",
-        daysLabel = "Días activos de castigo:",
+        title = stringResource(R.string.lock_schedule_title),
+        daysLabel = stringResource(R.string.lock_schedule_days_label),
         selectedDays = days,
         start = start,
         end = end,
@@ -54,8 +56,8 @@ fun EditWindowSection(
 ) {
     ScheduleCard(
         icon = Icons.Default.Edit,
-        title = "2. Ventana de Edición Semanal",
-        daysLabel = "Único día permitido para modificar reglas:",
+        title = stringResource(R.string.edit_window_title),
+        daysLabel = stringResource(R.string.edit_window_days_label),
         selectedDays = day?.let { setOf(it) } ?: emptySet(),
         start = start,
         end = end,
@@ -88,8 +90,8 @@ private fun ScheduleCard(
 
         Spacer(modifier = Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            TimePickerButton("Inicio", start, enabled, Modifier.weight(1f), onStartChange)
-            TimePickerButton("Fin", end, enabled, Modifier.weight(1f), onEndChange)
+            TimePickerButton(stringResource(R.string.time_start), start, enabled, Modifier.weight(1f), onStartChange)
+            TimePickerButton(stringResource(R.string.time_end), end, enabled, Modifier.weight(1f), onEndChange)
         }
     }
 }

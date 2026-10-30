@@ -16,18 +16,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jair.applocker.R
 import com.jair.applocker.domain.LockSettings
 import com.jair.applocker.ui.theme.GlassWhite
 import com.jair.applocker.ui.viewmodels.AppUiState
+import com.jair.applocker.ui.viewmodels.HolidayResult
 
 @Composable
 fun HomeScreen(
     uiState: AppUiState,
     onSaveRules: (rules: LockSettings, onResult: (saved: Boolean) -> Unit) -> Unit,
-    onActivateHoliday: (pin: String, onResult: (Boolean, String) -> Unit) -> Unit,
+    onActivateHoliday: (pin: String, onResult: (HolidayResult) -> Unit) -> Unit,
     onNavigateToAppList: () -> Unit,
 ) {
     val saved = uiState.settings
@@ -57,7 +60,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(24.dp))
         Icon(imageVector = Icons.Default.Shield, contentDescription = null, modifier = Modifier.size(64.dp), tint = colors.primary)
         Text(
-            text = "APPLOCKER",
+            text = stringResource(R.string.app_name).uppercase(),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
             color = colors.onBackground,
@@ -106,7 +109,7 @@ fun HomeScreen(
         ) {
             Icon(Icons.Default.VpnKey, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("PEDIR FRANCO (VACACIONES)", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(stringResource(R.string.holiday_button), fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -121,7 +124,7 @@ fun HomeScreen(
         ) {
             Icon(Icons.Default.AppBlocking, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("SELECCIONAR APPS", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.select_apps_button), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -133,7 +136,7 @@ fun HomeScreen(
                     editDay = editWindowDay, editStart = editStartTime, editEnd = editEndTime,
                 )
                 onSaveRules(rules) { ok ->
-                    val message = if (ok) "¡Reglas guardadas y activadas! 🛡️" else "Fuera de la ventana de edición: no se guardaron los cambios."
+                    val message = if (ok) R.string.rules_saved else R.string.rules_not_editable
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             },
@@ -144,7 +147,7 @@ fun HomeScreen(
         ) {
             Icon(Icons.Default.CheckCircle, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("GUARDAR REGLAS", fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
+            Text(stringResource(R.string.save_rules_button), fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
         }
 
         Spacer(modifier = Modifier.height(48.dp))
@@ -163,8 +166,8 @@ private fun LockedBanner() {
             Icon(Icons.Default.HourglassDisabled, contentDescription = null, tint = colors.error, modifier = Modifier.size(40.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("SISTEMA BLINDADO", color = colors.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Text("Esperá a tu ventana de edición semanal o usá el botón de vacaciones.", color = colors.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(stringResource(R.string.locked_banner_title), color = colors.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                Text(stringResource(R.string.locked_banner_message), color = colors.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
             }
         }
     }

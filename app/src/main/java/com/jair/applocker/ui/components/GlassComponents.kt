@@ -22,9 +22,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jair.applocker.R
 import com.jair.applocker.domain.TimeFormat
 import com.jair.applocker.ui.theme.GlassBorder
 import com.jair.applocker.ui.theme.GlassWhite
@@ -68,7 +71,7 @@ fun PermissionGlassButton(title: String, isGranted: Boolean, isEnabled: Boolean,
 @Composable
 fun DaysSelector(selectedDays: Set<Int>, isEditable: Boolean, onDayClick: (Int) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val days = listOf("L", "M", "X", "J", "V", "S", "D")
+    val days = stringArrayResource(R.array.day_initials)
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         days.forEachIndexed { index, day ->
             val isSelected = selectedDays.contains(index + 1)
@@ -89,6 +92,6 @@ fun TimePickerButton(label: String, time: LocalTime, isEditable: Boolean, modifi
     Box(contentAlignment = Alignment.Center, modifier = modifier.height(50.dp).clip(RoundedCornerShape(14.dp)).background(GlassWhite).clickable(enabled = isEditable) {
         TimePickerDialog(context, { _, h, m -> onTimeSelected(LocalTime.of(h, m)) }, time.hour, time.minute, true).show()
     }.border(1.dp, if (isEditable) GlassWhite else Color.Transparent, RoundedCornerShape(14.dp))) {
-        Text("$label: ${TimeFormat.format(time)}", color = if (isEditable) colors.onSurface else colors.outline, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.time_value, label, TimeFormat.format(time)), color = if (isEditable) colors.onSurface else colors.outline, fontWeight = FontWeight.Bold)
     }
 }

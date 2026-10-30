@@ -29,6 +29,8 @@ data class AppUiState(
     val installedApps: List<AppInfo>? = null,
 )
 
+enum class HolidayResult { ACTIVATED, INVALID_PIN, PIN_ALREADY_USED }
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appRepository = AppRepository(application)
@@ -80,19 +82,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun attemptActivateHoliday(pin: String, onResult: (Boolean, String) -> Unit) {
+    fun attemptActivateHoliday(pin: String, onResult: (HolidayResult) -> Unit) {
         viewModelScope.launch {
             if (!masterPins.contains(pin)) {
-                onResult(false, "PIN inválido. Pedile uno a tu amigo.")
+                onResult(HolidayResult.INVALID_PIN)
                 return@launch
             }
             if (settingsRepository.usedPins.first().contains(pin)) {
-                onResult(false, "Este PIN ya fue utilizado. Pedí otro.")
+                onResult(HolidayResult.PIN_ALREADY_USED)
                 return@launch
             }
 
             settingsRepository.activateHoliday(pin)
-            onResult(true, "¡PIN Aceptado! Franco activado por 24 horas.")
+            onResult(HolidayResult.ACTIVATED)
         }
     }
 

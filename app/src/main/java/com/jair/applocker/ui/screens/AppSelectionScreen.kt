@@ -9,8 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.jair.applocker.R
 import com.jair.applocker.data.model.AppInfo
 import com.jair.applocker.ui.viewmodels.AppUiState
 
@@ -46,7 +48,7 @@ fun AppListItem(app: AppInfo, isLocked: Boolean, enabled: Boolean, onToggle: () 
     ) {
         Image(
             bitmap = app.icon.toBitmap().asImageBitmap(),
-            contentDescription = "Ícono de ${app.appName}",
+            contentDescription = stringResource(R.string.app_icon_description, app.appName),
             modifier = Modifier.size(48.dp)
         )
 

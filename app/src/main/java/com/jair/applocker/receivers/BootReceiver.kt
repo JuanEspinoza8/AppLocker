@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.jair.applocker.R
 
 /**
  * Avisa al encender el teléfono que el bloqueo sigue activo.
@@ -15,11 +16,7 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Toast.makeText(
-                context,
-                "🛡️ AppLocker: Sistema de vigilancia reactivado tras reinicio.",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, R.string.boot_message, Toast.LENGTH_LONG).show()
         }
     }
 }

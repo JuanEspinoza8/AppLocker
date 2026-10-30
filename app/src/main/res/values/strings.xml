@@ -1,4 +1,60 @@
 <resources>
     <string name="app_name">AppLocker</string>
     <string name="accessibility_desc">Servicio necesario para detectar y bloquear aplicaciones restringidas.</string>
+
+    <!-- Pantalla principal -->
+    <string name="locked_banner_title">SISTEMA BLINDADO</string>
+    <string name="locked_banner_message">Esperá a tu ventana de edición semanal o usá el botón de vacaciones.</string>
+    <string name="lock_schedule_title">1. Horario Estricto de Bloqueo</string>
+    <string name="lock_schedule_days_label">Días activos de castigo:</string>
+    <string name="edit_window_title">2. Ventana de Edición Semanal</string>
+    <string name="edit_window_days_label">Único día permitido para modificar reglas:</string>
+    <string name="time_start">Inicio</string>
+    <string name="time_end">Fin</string>
+    <!-- Etiqueta y hora de un TimePickerButton, por ejemplo "Inicio: 08:00" -->
+    <string name="time_value">%1$s: %2$s</string>
+    <!-- De lunes a domingo -->
+    <string-array name="day_initials">
+        <item>L</item>
+        <item>M</item>
+        <item>X</item>
+        <item>J</item>
+        <item>V</item>
+        <item>S</item>
+        <item>D</item>
+    </string-array>
+    <string name="protection_title">ESTADO DE PROTECCIÓN</string>
+    <string name="protection_battery">Evitar Cierre por Batería</string>
+    <string name="protection_admin">Escudo Anti-Desinstalación</string>
+    <string name="device_admin_explanation">Protección esencial.</string>
+    <string name="holiday_button">PEDIR FRANCO (VACACIONES)</string>
+    <string name="select_apps_button">SELECCIONAR APPS</string>
+    <string name="save_rules_button">GUARDAR REGLAS</string>
+    <string name="rules_saved">¡Reglas guardadas y activadas! 🛡️</string>
+    <string name="rules_not_editable">Fuera de la ventana de edición: no se guardaron los cambios.</string>
+
+    <!-- Franco -->
+    <string name="pin_dialog_title">Activar Modo Vacaciones</string>
+    <string name="pin_dialog_message">Pedile un PIN de 4 dígitos a tu amigo y justificale por qué lo necesitás.</string>
+    <string name="pin_dialog_label">PIN de 4 dígitos</string>
+    <string name="pin_dialog_confirm">ACTIVAR</string>
+    <string name="pin_dialog_cancel">CANCELAR</string>
+    <string name="pin_wrong_length">El PIN debe tener 4 números.</string>
+    <string name="pin_invalid">PIN inválido. Pedile uno a tu amigo.</string>
+    <string name="pin_already_used">Este PIN ya fue utilizado. Pedí otro.</string>
+    <string name="holiday_activated">¡PIN Aceptado! Franco activado por 24 horas.</string>
+
+    <!-- Lista de apps -->
+    <string name="app_icon_description">Ícono de %1$s</string>
+
+    <!-- Pantalla de bloqueo -->
+    <string name="lock_screen_icon_description">Alerta</string>
+    <string name="lock_screen_title">¡APLICACIÓN BLOQUEADA!</string>
+    <string name="lock_screen_message">Estás en horario estricto.\nNo hay vuelta atrás, volvé a tus tareas.</string>
+    <string name="lock_screen_go_home">Ir a la pantalla de Inicio</string>
+
+    <!-- Avisos del sistema -->
+    <string name="admin_enabled">Modo estricto activado</string>
+    <string name="admin_disabled">Modo estricto desactivado</string>
+    <string name="boot_message">🛡️ AppLocker: Sistema de vigilancia reactivado tras reinicio.</string>
 </resources>
