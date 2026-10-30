@@ -108,6 +108,26 @@ class LockPolicyTest {
         assertFalse(policyAt(MONDAY, "12:00").isScheduleActive(settings))
     }
 
+    @Test
+    fun `una franja que cruza la medianoche termina al dia siguiente`() {
+        val settings = schedule(setOf(1), "22:00", "07:00")
+
+        assertTrue(policyAt(TUESDAY, "00:00").isScheduleActive(settings))
+        assertTrue(policyAt(TUESDAY, "07:00").isScheduleActive(settings))
+        assertFalse(policyAt(TUESDAY, "07:01").isScheduleActive(settings))
+        // La madrugada del lunes pertenece a la noche del domingo, que no está elegido
+        assertFalse(policyAt(MONDAY, "06:00").isScheduleActive(settings))
+    }
+
+    @Test
+    fun `el cruce de medianoche funciona de domingo a lunes`() {
+        val settings = schedule(setOf(7), "23:00", "01:00")
+
+        assertTrue(policyAt(SUNDAY, "23:30").isScheduleActive(settings))
+        assertTrue(policyAt(MONDAY, "00:30").isScheduleActive(settings))
+        assertFalse(policyAt(SUNDAY, "00:30").isScheduleActive(settings))
+    }
+
     // --- Bloqueo de apps ---
 
     @Test
@@ -135,6 +155,19 @@ class LockPolicyTest {
         assertFalse(policyAt(SATURDAY, "11:00").isEditable(settings))
         assertFalse(policyAt(SUNDAY, "11:00").shouldBlock(SETTINGS_APP, settings))
         assertTrue(policyAt(SUNDAY, "13:00").shouldBlock(SETTINGS_APP, settings))
+    }
+
+    @Test
+    fun `una ventana de edicion que cruza la medianoche sigue abierta al dia siguiente`() {
+        val settings = schedule(setOf(1, 2, 3, 4, 5), "09:00", "17:00").copy(
+            editDay = 7,
+            editStart = LocalTime.parse("23:00"),
+            editEnd = LocalTime.parse("01:00"),
+        )
+
+        assertTrue(policyAt(SUNDAY, "23:30").isEditable(settings))
+        assertTrue(policyAt(MONDAY, "00:30").isEditable(settings))
+        assertFalse(policyAt(SUNDAY, "00:30").isEditable(settings))
     }
 
     @Test

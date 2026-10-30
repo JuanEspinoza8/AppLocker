@@ -41,15 +41,21 @@ class LockPolicy(private val clock: Clock = Clock.systemDefaultZone()) {
         return packageName in settings.lockedApps && isScheduleActive(settings)
     }
 
+    /**
+     * Si el fin es anterior al inicio, la franja cruza la medianoche y pertenece al día en que
+     * empieza (como el "No molestar" de Android): lunes 22:00–07:00 va del lunes a las 22:00 al
+     * martes a las 07:00.
+     */
     private fun isWithin(days: Set<Int>, start: LocalTime, end: LocalTime): Boolean {
         val now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MINUTES)
-        if (now.dayOfWeek.value !in days) return false
-
+        val today = now.dayOfWeek.value
         val time = now.toLocalTime()
+
         return if (start <= end) {
-            time in start..end
+            today in days && time in start..end
         } else {
-            time >= start || time <= end
+            val yesterday = now.minusDays(1).dayOfWeek.value
+            (today in days && time >= start) || (yesterday in days && time <= end)
         }
     }
 
