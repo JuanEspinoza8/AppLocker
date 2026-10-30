@@ -38,6 +38,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    val protection = rememberProtectionStatus()
 
     var showPinDialog by remember { mutableStateOf(false) }
 
@@ -68,6 +69,10 @@ fun HomeScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
         )
 
+        if (!protection.isAccessibilityEnabled) {
+            AccessibilityBanner(onEnableClick = { openAccessibilitySettings(context) })
+        }
+
         if (uiState.isLoaded && !isEditable) {
             LockedBanner()
         }
@@ -96,7 +101,7 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ProtectionSection(isEditable)
+        ProtectionSection(protection, isEditable)
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -151,6 +156,33 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+/** Aviso de que el servicio de accesibilidad está apagado y, por lo tanto, no se bloquea nada. */
+@Composable
+private fun AccessibilityBanner(onEnableClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp).clip(RoundedCornerShape(20.dp))
+            .background(GlassWhite).border(1.dp, colors.primary, RoundedCornerShape(20.dp))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Accessibility, contentDescription = null, tint = colors.primary, modifier = Modifier.size(40.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(stringResource(R.string.accessibility_banner_title), color = colors.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text(stringResource(R.string.accessibility_banner_message), color = colors.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(stringResource(R.string.accessibility_banner_hint), color = colors.outline, fontSize = 12.sp, lineHeight = 16.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onEnableClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                Text(stringResource(R.string.accessibility_banner_button), fontWeight = FontWeight.Black)
+            }
+        }
     }
 }
 

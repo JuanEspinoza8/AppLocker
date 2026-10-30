@@ -3,6 +3,10 @@
     <string name="accessibility_desc">Servicio necesario para detectar y bloquear aplicaciones restringidas.</string>
 
     <!-- Pantalla principal -->
+    <string name="accessibility_banner_title">PROTECCIÓN APAGADA</string>
+    <string name="accessibility_banner_message">Activá el servicio de accesibilidad de AppLocker: sin él no se bloquea ninguna app.</string>
+    <string name="accessibility_banner_hint">Si Android muestra la opción deshabilitada, andá a Ajustes → Apps → AppLocker → ⋮ → Permitir ajustes restringidos y volvé a intentar.</string>
+    <string name="accessibility_banner_button">ACTIVAR SERVICIO</string>
     <string name="locked_banner_title">SISTEMA BLINDADO</string>
     <string name="locked_banner_message">Esperá a tu ventana de edición semanal o usá el botón de vacaciones.</string>
     <string name="lock_schedule_title">1. Horario Estricto de Bloqueo</string>
@@ -24,6 +28,7 @@
         <item>D</item>
     </string-array>
     <string name="protection_title">ESTADO DE PROTECCIÓN</string>
+    <string name="protection_accessibility">Servicio de Accesibilidad</string>
     <string name="protection_battery">Evitar Cierre por Batería</string>
     <string name="protection_admin">Escudo Anti-Desinstalación</string>
     <string name="device_admin_explanation">Protección esencial.</string>
