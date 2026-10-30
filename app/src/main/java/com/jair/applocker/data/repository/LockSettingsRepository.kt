@@ -41,15 +41,16 @@ class LockSettingsRepository(
         dataStore.markPinAsUsed(pin)
         dataStore.saveHolidayUntil(ZonedDateTime.now(clock).plusDays(1).toInstant().toEpochMilli())
     }
-
-    private fun Preferences.toLockSettings() = LockSettings(
-        lockedApps = this[DataStoreManager.LOCKED_APPS] ?: emptySet(),
-        lockedDays = this[DataStoreManager.LOCKED_DAYS].orEmpty().mapNotNull { it.toIntOrNull() }.toSet(),
-        lockStart = TimeFormat.parse(this[DataStoreManager.LOCK_START_TIME]),
-        lockEnd = TimeFormat.parse(this[DataStoreManager.LOCK_END_TIME]),
-        editDay = this[DataStoreManager.EDIT_DAY],
-        editStart = TimeFormat.parse(this[DataStoreManager.EDIT_START_TIME]),
-        editEnd = TimeFormat.parse(this[DataStoreManager.EDIT_END_TIME]),
-        holidayUntilMillis = this[DataStoreManager.HOLIDAY_UNTIL_TIME] ?: 0L,
-    )
 }
+
+/** Arma [LockSettings] desde las preferencias guardadas; los valores que faltan toman su default. */
+internal fun Preferences.toLockSettings() = LockSettings(
+    lockedApps = this[DataStoreManager.LOCKED_APPS] ?: emptySet(),
+    lockedDays = this[DataStoreManager.LOCKED_DAYS].orEmpty().mapNotNull { it.toIntOrNull() }.toSet(),
+    lockStart = TimeFormat.parse(this[DataStoreManager.LOCK_START_TIME]),
+    lockEnd = TimeFormat.parse(this[DataStoreManager.LOCK_END_TIME]),
+    editDay = this[DataStoreManager.EDIT_DAY],
+    editStart = TimeFormat.parse(this[DataStoreManager.EDIT_START_TIME]),
+    editEnd = TimeFormat.parse(this[DataStoreManager.EDIT_END_TIME]),
+    holidayUntilMillis = this[DataStoreManager.HOLIDAY_UNTIL_TIME] ?: 0L,
+)
