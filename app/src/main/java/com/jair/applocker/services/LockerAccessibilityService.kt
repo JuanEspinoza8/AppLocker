@@ -4,116 +4,36 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import com.jair.applocker.LockActivity
-import com.jair.applocker.data.local.DataStoreManager
+import com.jair.applocker.data.repository.LockSettingsRepository
+import com.jair.applocker.domain.LockPolicy
+import com.jair.applocker.domain.LockSettings
 import kotlinx.coroutines.*
-import java.util.Calendar
 
 class LockerAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private lateinit var dataStoreManager: DataStoreManager
+    private val lockPolicy = LockPolicy()
 
-    // Bloqueo de apps
-    private var lockedApps: Set<String> = emptySet()
-    private var lockedDays: Set<String> = emptySet()
-    private var lockStartTime: String = "00:00"
-    private var lockEndTime: String = "00:00"
-
-    // Salidas permitidas
-    private var editDay: Int? = null
-    private var editStartTime: String = "00:00"
-    private var editEndTime: String = "00:00"
-    private var holidayUntil: Long = 0L
+    // Última configuración leída; null hasta que DataStore emite por primera vez
+    @Volatile
+    private var settings: LockSettings? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        dataStoreManager = DataStoreManager(applicationContext)
-
-        serviceScope.launch {
-            launch { dataStoreManager.lockedAppsFlow.collect { lockedApps = it } }
-            launch { dataStoreManager.lockedDaysFlow.collect { lockedDays = it } }
-            launch { dataStoreManager.lockStartTimeFlow.collect { lockStartTime = it } }
-            launch { dataStoreManager.lockEndTimeFlow.collect { lockEndTime = it } }
-
-            launch { dataStoreManager.editDayFlow.collect { editDay = it } }
-            launch { dataStoreManager.editStartTimeFlow.collect { editStartTime = it } }
-            launch { dataStoreManager.editEndTimeFlow.collect { editEndTime = it } }
-            launch { dataStoreManager.holidayUntilFlow.collect { holidayUntil = it } }
-        }
+        val repository = LockSettingsRepository(applicationContext)
+        serviceScope.launch { repository.settings.collect { settings = it } }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: return
+            val currentSettings = settings ?: return
 
             if (packageName == "com.jair.applocker" || packageName.contains("systemui")) return
 
-            // PROTECCIÓN DE AJUSTES (Para evitar desinstalación forzada)
-            if (packageName == "com.android.settings" || packageName == "com.samsung.android.settings") {
-                // Si el sistema no está en modo "Editable" (sin franco y sin ventana de edición), bloqueamos
-                if (!isSystemEditableNow()) {
-                    launchLockScreen()
-                    return
-                }
+            if (lockPolicy.shouldBlock(packageName, currentSettings)) {
+                launchLockScreen()
             }
-
-            // BLOQUEO DE APPS NORMAL
-            if (lockedApps.contains(packageName)) {
-                if (isLockActiveNow()) {
-                    launchLockScreen()
-                }
-            }
-        }
-    }
-
-    // Calcula si estamos dentro de la Ventana de Edición o del PIN de Vacaciones
-    private fun isSystemEditableNow(): Boolean {
-        // 0. Sin días de bloqueo configurados (app recién instalada) todo es editable
-        if (lockedDays.isEmpty()) return true
-
-        // 1. ¿Está de vacaciones/franco?
-        if (System.currentTimeMillis() < holidayUntil) return true
-
-        // 2. ¿Es el horario de edición semanal?
-        if (editDay != null) {
-            val calendar = Calendar.getInstance()
-            val currentDayMapped = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 7 else calendar.get(Calendar.DAY_OF_WEEK) - 1
-
-            if (currentDayMapped == editDay) {
-                val currentTotalMinutes = (calendar.get(Calendar.HOUR_OF_DAY) * 60) + calendar.get(Calendar.MINUTE)
-                val startParts = editStartTime.split(":")
-                val startTotalMinutes = (startParts[0].toInt() * 60) + startParts[1].toInt()
-                val endParts = editEndTime.split(":")
-                val endTotalMinutes = (endParts[0].toInt() * 60) + endParts[1].toInt()
-
-                return if (startTotalMinutes <= endTotalMinutes) {
-                    currentTotalMinutes in startTotalMinutes..endTotalMinutes
-                } else {
-                    currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes
-                }
-            }
-        }
-        return false // Si no hay franco ni es hora de edición, está bloqueado
-    }
-
-    private fun isLockActiveNow(): Boolean {
-        if (lockedDays.isEmpty()) return false
-
-        val calendar = Calendar.getInstance()
-        val currentDayMapped = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 7 else calendar.get(Calendar.DAY_OF_WEEK) - 1
-
-        if (!lockedDays.contains(currentDayMapped.toString())) return false
-
-        val currentTotalMinutes = (calendar.get(Calendar.HOUR_OF_DAY) * 60) + calendar.get(Calendar.MINUTE)
-        val startParts = lockStartTime.split(":")
-        val startTotalMinutes = (startParts[0].toInt() * 60) + startParts[1].toInt()
-        val endParts = lockEndTime.split(":")
-        val endTotalMinutes = (endParts[0].toInt() * 60) + endParts[1].toInt()
-
-        return if (startTotalMinutes <= endTotalMinutes) {
-            currentTotalMinutes in startTotalMinutes..endTotalMinutes
-        } else {
-            currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes
         }
     }
 

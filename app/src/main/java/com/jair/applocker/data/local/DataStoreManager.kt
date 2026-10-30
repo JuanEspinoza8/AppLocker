@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.Calendar
 
 private val Context.dataStore by preferencesDataStore(name = "applocker_prefs")
 
@@ -47,12 +46,8 @@ class DataStoreManager(private val context: Context) {
     }
 
     // --- NUEVOS SETTERS ---
-    suspend fun activateHolidayMode() {
-        context.dataStore.edit { prefs ->
-            val calendar = Calendar.getInstance()
-            calendar.add(Calendar.DAY_OF_YEAR, 1) // Sumamos 24 horas exactas a partir de ahora
-            prefs[HOLIDAY_UNTIL_TIME] = calendar.timeInMillis
-        }
+    suspend fun saveHolidayUntil(untilMillis: Long) {
+        context.dataStore.edit { it[HOLIDAY_UNTIL_TIME] = untilMillis }
     }
 
     suspend fun markPinAsUsed(pin: String) {
@@ -62,19 +57,9 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    // Getters Reactivos (Flows)
-    val lockedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_APPS] ?: emptySet() }
-    val lockedDaysFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_DAYS] ?: emptySet() }
-    val lockStartTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_START_TIME] ?: "00:00" }
-    val lockEndTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_END_TIME] ?: "00:00" }
+    /** Todas las preferencias; cada cambio emite una instantánea completa. */
+    val preferences: Flow<Preferences> = context.dataStore.data
 
-    val editDayFlow: Flow<Int?> = context.dataStore.data.map { it[EDIT_DAY] }
-    val editStartTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_START_TIME] ?: "00:00" }
-    val editEndTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_END_TIME] ?: "00:00" }
-
-    // --- NUEVOS GETTERS ---
-    // Nos devuelve hasta qué hora duran las vacaciones
-    val holidayUntilFlow: Flow<Long> = context.dataStore.data.map { it[HOLIDAY_UNTIL_TIME] ?: 0L }
     // Nos devuelve la lista negra de pines usados
     val usedPinsFlow: Flow<Set<String>> = context.dataStore.data.map { it[USED_PINS] ?: emptySet() }
 }
