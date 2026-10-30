@@ -2,10 +2,19 @@ package com.jair.applocker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Paleta de la app: fondo AMOLED negro con acento cian. Se usa a través de AppColorScheme.
+val PureBlack = Color(0xFF000000)
+val NeonBlue = Color(0xFF00E5FF)
+val NeonRed = Color(0xFFFF1744)
+val SurfaceDark = Color(0xFF121212)
+val TextSecondary = Color(0xFFCCCCCC)
+val TextMuted = Color(0xFF888888)
+val LockRed = Color(0xFFB00020)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Colores sin lugar en el esquema de Material 3
+/** Relleno translúcido de tarjetas y botones. */
+val GlassWhite = Color(0x1AFFFFFF)
+/** Borde sutil de las tarjetas. */
+val GlassBorder = Color(0x0DFFFFFF)
+/** Permiso concedido. */
+val SuccessGreen = Color(0xFF00C853)

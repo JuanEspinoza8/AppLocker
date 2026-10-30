@@ -3,182 +3,186 @@ package com.jair.applocker.ui.viewmodels
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.jair.applocker.data.local.DataStoreManager
 import com.jair.applocker.data.model.AppInfo
 import com.jair.applocker.data.repository.AppRepository
+import com.jair.applocker.data.repository.HolidayCodeRepository
+import com.jair.applocker.data.repository.LockSettingsRepository
+import com.jair.applocker.domain.Base32
+import com.jair.applocker.domain.CodeCheck
+import com.jair.applocker.domain.LockPolicy
+import com.jair.applocker.domain.LockSettings
+import com.jair.applocker.domain.Totp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Calendar
+import java.security.SecureRandom
+
+/** Estado de las pantallas de configuración. */
+data class AppUiState(
+    /** `false` hasta que se lee la configuración guardada. */
+    val isLoaded: Boolean = false,
+    val settings: LockSettings = LockSettings(),
+    val isEditable: Boolean = false,
+    /** Apps instaladas, o `null` mientras se cargan. */
+    val installedApps: List<AppInfo>? = null,
+    /** Si ya hay un autenticador configurado para dar francos. */
+    val isHolidayConfigured: Boolean = false,
+)
+
+/** Datos para que quien da los francos agregue la cuenta a su app de autenticación. */
+data class AuthenticatorSetup(val secretBase32: String, val otpauthUri: String)
+
+sealed interface SetupStart {
+    data class Ready(val setup: AuthenticatorSetup) : SetupStart
+    /** El código del autenticador actual no fue válido. */
+    data class Rejected(val check: CodeCheck) : SetupStart
+    /** Sin autenticador previo, solo se puede configurar cuando las reglas son editables. */
+    data object NotAllowed : SetupStart
+}
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AppRepository(application)
-    private val dataStoreManager = DataStoreManager(application)
+    private val appRepository = AppRepository(application)
+    private val settingsRepository = LockSettingsRepository(application)
+    private val holidayCodes = HolidayCodeRepository(application)
+    private val lockPolicy = LockPolicy()
 
-    // Lista maestra de 100 PINes (No tocar)
-    private val masterPins = setOf(
-        "1408", "2731", "3954", "4170", "5092", "6315", "7538", "8761", "9984", "1207",
-        "2430", "3653", "4876", "5190", "6413", "7636", "8859", "9082", "1305", "2528",
-        "3751", "4974", "5297", "6520", "7743", "8966", "9189", "1403", "2626", "3849",
-        "4072", "5395", "6618", "7841", "9064", "9287", "1501", "2724", "3947", "4170",
-        "5493", "6716", "7939", "9162", "9385", "1699", "2822", "3045", "4268", "5591",
-        "6814", "8037", "9260", "9483", "1797", "2920", "3143", "4366", "5689", "6912",
-        "8135", "9358", "9581", "1895", "2018", "3241", "4464", "5787", "6010", "7233",
-        "8456", "9679", "1993", "2116", "3339", "4562", "5885", "6108", "7331", "8554",
-        "9777", "1091", "2214", "3437", "4660", "5983", "6206", "7429", "8652", "9875",
-        "1189", "2312", "3535", "4758", "5081", "6304", "7527", "8750", "9973", "1296"
-    )
+    /** Secreto generado durante la configuración; se guarda recién cuando se confirma con un código. */
+    private var pendingSecret: ByteArray? = null
 
-    private var usedPins: Set<String> = emptySet()
-    private var holidayUntil: Long = 0L
+    private val installedApps = MutableStateFlow<List<AppInfo>?>(null)
 
-    private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
-    val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // --- ESTADOS DE LA UI ---
-    private val _lockedDays = MutableStateFlow<Set<Int>>(emptySet())
-    val lockedDays: StateFlow<Set<Int>> = _lockedDays.asStateFlow()
-
-    private val _lockStartTime = MutableStateFlow("00:00")
-    val lockStartTime: StateFlow<String> = _lockStartTime.asStateFlow()
-
-    private val _lockEndTime = MutableStateFlow("00:00")
-    val lockEndTime: StateFlow<String> = _lockEndTime.asStateFlow()
-
-    // Ventana de Edición
-    private val _editDay = MutableStateFlow<Int?>(null)
-    val editDay: StateFlow<Int?> = _editDay.asStateFlow()
-
-    private val _editStartTime = MutableStateFlow("00:00")
-    val editStartTime: StateFlow<String> = _editStartTime.asStateFlow()
-
-    private val _editEndTime = MutableStateFlow("00:00")
-    val editEndTime: StateFlow<String> = _editEndTime.asStateFlow()
-
-    private var internalEditDay: Int? = null
-    private var internalEditStart: String = "00:00"
-    private var internalEditEnd: String = "00:00"
-
-    private val _isEditable = MutableStateFlow(true)
-    val isEditable: StateFlow<Boolean> = _isEditable.asStateFlow()
+    /**
+     * Se recalcula con cada cambio de configuración y al comienzo de cada minuto, para que la
+     * edición se cierre sola al terminar la ventana o el franco.
+     */
+    val uiState: StateFlow<AppUiState> = combine(
+        settingsRepository.settings,
+        installedApps,
+        holidayCodes.isConfigured,
+        minuteTicker(),
+    ) { settings, apps, holidayConfigured, _ ->
+        AppUiState(
+            isLoaded = true,
+            settings = settings,
+            isEditable = lockPolicy.isEditable(settings),
+            installedApps = apps,
+            isHolidayConfigured = holidayConfigured,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppUiState())
 
     init {
-        loadApps()
-        loadSavedConfigAndEvaluate()
+        viewModelScope.launch { installedApps.value = appRepository.getInstalledApps() }
     }
 
-    private fun loadApps() {
+    /** Emite al suscribirse y después al comienzo de cada minuto. */
+    private fun minuteTicker(): Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(MINUTE_MILLIS - System.currentTimeMillis() % MINUTE_MILLIS)
+        }
+    }
+
+    /** Activa el franco si [code] es un código válido y sin usar del autenticador. */
+    fun attemptActivateHoliday(code: String, onResult: (CodeCheck) -> Unit) {
         viewModelScope.launch {
-            _isLoading.value = true
-            val baseApps = repository.getInstalledApps()
-            dataStoreManager.lockedAppsFlow.collect { lockedPackageNames ->
-                _installedApps.value = baseApps.map { app ->
-                    app.copy(isLocked = lockedPackageNames.contains(app.packageName))
-                }
-                _isLoading.value = false
-            }
+            val check = holidayCodes.verifyAndConsume(code)
+            if (check == CodeCheck.Valid) settingsRepository.activateHoliday()
+            onResult(check)
         }
     }
 
-    private fun loadSavedConfigAndEvaluate() {
+    /**
+     * Empieza a configurar el autenticador del franco. La primera vez solo se permite mientras las
+     * reglas sean editables; para reemplazar uno existente hace falta un código válido de ese
+     * autenticador ([currentCode]), así quien usa el bloqueo no puede quedarse con los francos.
+     */
+    fun beginAuthenticatorSetup(currentCode: String?, onResult: (SetupStart) -> Unit) {
         viewModelScope.launch {
-            dataStoreManager.lockedDaysFlow.collect { daysStr ->
-                _lockedDays.value = daysStr.mapNotNull { it.toIntOrNull() }.toSet()
-                evaluateLockStatus()
-            }
-        }
-        viewModelScope.launch { dataStoreManager.lockStartTimeFlow.collect { _lockStartTime.value = it } }
-        viewModelScope.launch { dataStoreManager.lockEndTimeFlow.collect { _lockEndTime.value = it } }
-
-        // Recolectar Ventana de Edición
-        viewModelScope.launch { dataStoreManager.editDayFlow.collect { _editDay.value = it; internalEditDay = it; evaluateLockStatus() } }
-        viewModelScope.launch { dataStoreManager.editStartTimeFlow.collect { _editStartTime.value = it; internalEditStart = it; evaluateLockStatus() } }
-        viewModelScope.launch { dataStoreManager.editEndTimeFlow.collect { _editEndTime.value = it; internalEditEnd = it; evaluateLockStatus() } }
-
-        // Recolectar Vacaciones
-        viewModelScope.launch { dataStoreManager.usedPinsFlow.collect { usedPins = it } }
-        viewModelScope.launch { dataStoreManager.holidayUntilFlow.collect { until -> holidayUntil = until; evaluateLockStatus() } }
-    }
-
-    private fun evaluateLockStatus() {
-        val currentTime = Calendar.getInstance().timeInMillis
-
-        // REGLA 0: Si está recién instalada o no hay días configurados
-        if (_lockedDays.value.isEmpty()) {
-            _isEditable.value = true
-            return
-        }
-
-        // REGLA 1: Franco activo (PIN)
-        if (currentTime < holidayUntil) {
-            _isEditable.value = true
-            return
-        }
-
-        // REGLA 2: Ventana de edición semanal
-        if (internalEditDay != null) {
-            val calendar = Calendar.getInstance()
-            val currentDayMapped = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 7 else calendar.get(Calendar.DAY_OF_WEEK) - 1
-
-            if (currentDayMapped == internalEditDay) {
-                val currentTotalMinutes = (calendar.get(Calendar.HOUR_OF_DAY) * 60) + calendar.get(Calendar.MINUTE)
-                val startParts = internalEditStart.split(":")
-                val startTotalMinutes = (startParts[0].toInt() * 60) + startParts[1].toInt()
-                val endParts = internalEditEnd.split(":")
-                val endTotalMinutes = (endParts[0].toInt() * 60) + endParts[1].toInt()
-
-                val inEditWindow = if (startTotalMinutes <= endTotalMinutes) {
-                    currentTotalMinutes in startTotalMinutes..endTotalMinutes
-                } else {
-                    currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes
+            if (holidayCodes.isConfigured.first()) {
+                val check = holidayCodes.verifyAndConsume(currentCode.orEmpty())
+                // NotConfigured acá significa que el secreto guardado no se pudo leer y se borró
+                val canStartOver = check == CodeCheck.NotConfigured && currentSettingsIfEditable() != null
+                if (check != CodeCheck.Valid && !canStartOver) {
+                    onResult(SetupStart.Rejected(check))
+                    return@launch
                 }
-
-                if (inEditWindow) {
-                    _isEditable.value = true
-                    return
-                }
-            }
-        }
-
-        // Si fallan todas las reglas, se bloquea la app
-        _isEditable.value = false
-    }
-
-    fun attemptActivateHoliday(pin: String, onResult: (Boolean, String) -> Unit) {
-        viewModelScope.launch {
-            if (!masterPins.contains(pin)) {
-                onResult(false, "PIN inválido. Pedile uno a tu amigo.")
-                return@launch
-            }
-            if (usedPins.contains(pin)) {
-                onResult(false, "Este PIN ya fue utilizado. Pedí otro.")
+            } else if (currentSettingsIfEditable() == null) {
+                onResult(SetupStart.NotAllowed)
                 return@launch
             }
 
-            dataStoreManager.markPinAsUsed(pin)
-            dataStoreManager.activateHolidayMode()
-            onResult(true, "¡PIN Aceptado! Franco activado por 24 horas.")
+            val secret = ByteArray(Totp.SECRET_BYTES).also { SecureRandom().nextBytes(it) }
+            pendingSecret?.fill(0)
+            pendingSecret = secret
+            val setup = AuthenticatorSetup(
+                secretBase32 = Base32.encode(secret),
+                otpauthUri = Totp.otpauthUri(secret, issuer = "AppLocker", account = "Franco"),
+            )
+            onResult(SetupStart.Ready(setup))
         }
     }
+
+    /** Guarda el autenticador si [code] coincide con el secreto mostrado. */
+    fun confirmAuthenticatorSetup(code: String, onResult: (saved: Boolean) -> Unit) {
+        val secret = pendingSecret ?: return onResult(false)
+        viewModelScope.launch {
+            val step = Totp.matchStep(secret, code, System.currentTimeMillis(), lastUsedStep = -1)
+            if (step == null) {
+                onResult(false)
+                return@launch
+            }
+            holidayCodes.saveSecret(secret, usedStep = step)
+            cancelAuthenticatorSetup()
+            onResult(true)
+        }
+    }
+
+    fun cancelAuthenticatorSetup() {
+        pendingSecret?.fill(0)
+        pendingSecret = null
+    }
+
+    override fun onCleared() {
+        cancelAuthenticatorSetup()
+    }
+
+    /** La UI deshabilita la edición, pero la regla se valida acá contra la configuración guardada. */
+    private suspend fun currentSettingsIfEditable(): LockSettings? =
+        settingsRepository.settings.first().takeIf { lockPolicy.isEditable(it) }
 
     fun toggleAppLock(packageName: String) {
         viewModelScope.launch {
-            val currentLocked = _installedApps.value.filter { it.isLocked }.map { it.packageName }.toMutableSet()
-            if (currentLocked.contains(packageName)) currentLocked.remove(packageName) else currentLocked.add(packageName)
-            dataStoreManager.saveLockedApps(currentLocked)
+            val lockedApps = currentSettingsIfEditable()?.lockedApps ?: return@launch
+            val updated = if (packageName in lockedApps) lockedApps - packageName else lockedApps + packageName
+            settingsRepository.saveLockedApps(updated)
         }
     }
 
-    fun saveLockConfig(days: Set<Int>, start: String, end: String) {
-        viewModelScope.launch { dataStoreManager.saveLockSchedule(days, start, end) }
+    /**
+     * Guarda el horario de bloqueo y la ventana de edición de [rules]. [onResult] recibe `false`
+     * si en este momento no se permite editar.
+     */
+    fun saveRules(rules: LockSettings, onResult: (saved: Boolean) -> Unit) {
+        viewModelScope.launch {
+            if (currentSettingsIfEditable() == null) {
+                onResult(false)
+                return@launch
+            }
+            settingsRepository.saveLockSchedule(rules.lockedDays, rules.lockStart, rules.lockEnd)
+            settingsRepository.saveEditWindow(rules.editDay, rules.editStart, rules.editEnd)
+            onResult(true)
+        }
     }
 
-    fun saveEditWindowConfig(day: Int?, start: String, end: String) {
-        viewModelScope.launch { dataStoreManager.saveEditWindow(day, start, end) }
+    private companion object {
+        const val MINUTE_MILLIS = 60_000L
     }
 }

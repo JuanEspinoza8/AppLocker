@@ -7,14 +7,14 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jair.applocker.ui.screens.AppSelectionScreen
-import com.jair.applocker.ui.screens.HomeScreen
+import com.jair.applocker.ui.screens.home.HomeScreen
 import com.jair.applocker.ui.theme.AppLockerTheme
 import com.jair.applocker.ui.viewmodels.AppViewModel
 
@@ -32,24 +32,24 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
                     NavHost(navController = navController, startDestination = "home") {
 
                         composable("home") {
-                            // Acá escuchamos si la pantalla debe estar bloqueada o no
-                            val isEditable by viewModel.isEditable.collectAsState()
-
                             HomeScreen(
-                                viewModel = viewModel,
-                                onNavigateToAppList = {
-                                    navController.navigate("appList")
-                                },
-                                isEditable = isEditable
+                                uiState = uiState,
+                                onSaveRules = viewModel::saveRules,
+                                onActivateHoliday = viewModel::attemptActivateHoliday,
+                                onBeginAuthenticatorSetup = viewModel::beginAuthenticatorSetup,
+                                onConfirmAuthenticatorSetup = viewModel::confirmAuthenticatorSetup,
+                                onCancelAuthenticatorSetup = viewModel::cancelAuthenticatorSetup,
+                                onNavigateToAppList = { navController.navigate("appList") }
                             )
                         }
 
                         composable("appList") {
-                            AppSelectionScreen(viewModel = viewModel)
+                            AppSelectionScreen(uiState = uiState, onToggleApp = viewModel::toggleAppLock)
                         }
                     }
                 }

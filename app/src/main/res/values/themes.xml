@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AppLocker" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Fondo negro desde el arranque, igual que el tema de Compose (evita el destello blanco) -->
+    <style name="Theme.AppLocker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

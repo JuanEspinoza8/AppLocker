@@ -1,4 +1,84 @@
 <resources>
     <string name="app_name">AppLocker</string>
     <string name="accessibility_desc">Servicio necesario para detectar y bloquear aplicaciones restringidas.</string>
+
+    <!-- Pantalla principal -->
+    <string name="accessibility_banner_title">PROTECCIÓN APAGADA</string>
+    <string name="accessibility_banner_message">Activá el servicio de accesibilidad de AppLocker: sin él no se bloquea ninguna app.</string>
+    <string name="accessibility_banner_hint">Si Android muestra la opción deshabilitada, andá a Ajustes → Apps → AppLocker → ⋮ → Permitir ajustes restringidos y volvé a intentar.</string>
+    <string name="accessibility_banner_button">ACTIVAR SERVICIO</string>
+    <string name="locked_banner_title">SISTEMA BLINDADO</string>
+    <string name="locked_banner_message">Esperá a tu ventana de edición semanal o usá el botón de vacaciones.</string>
+    <string name="lock_schedule_title">1. Horario Estricto de Bloqueo</string>
+    <string name="lock_schedule_days_label">Días activos de castigo:</string>
+    <string name="edit_window_title">2. Ventana de Edición Semanal</string>
+    <string name="edit_window_days_label">Único día permitido para modificar reglas:</string>
+    <string name="time_start">Inicio</string>
+    <string name="time_end">Fin</string>
+    <!-- Etiqueta y hora de un TimePickerButton, por ejemplo "Inicio: 08:00" -->
+    <string name="time_value">%1$s: %2$s</string>
+    <!-- De lunes a domingo -->
+    <string-array name="day_initials">
+        <item>L</item>
+        <item>M</item>
+        <item>X</item>
+        <item>J</item>
+        <item>V</item>
+        <item>S</item>
+        <item>D</item>
+    </string-array>
+    <string name="protection_title">ESTADO DE PROTECCIÓN</string>
+    <string name="protection_accessibility">Servicio de Accesibilidad</string>
+    <string name="protection_battery">Evitar Cierre por Batería</string>
+    <string name="protection_admin">Escudo Anti-Desinstalación</string>
+    <string name="protection_holiday_authenticator">Autenticador del Franco</string>
+    <string name="device_admin_explanation">Protección esencial.</string>
+    <string name="holiday_button">PEDIR FRANCO (VACACIONES)</string>
+    <string name="select_apps_button">SELECCIONAR APPS</string>
+    <string name="save_rules_button">GUARDAR REGLAS</string>
+    <string name="rules_saved">¡Reglas guardadas y activadas! 🛡️</string>
+    <string name="rules_not_editable">Fuera de la ventana de edición: no se guardaron los cambios.</string>
+
+    <!-- Diálogos -->
+    <string name="dialog_activate">ACTIVAR</string>
+    <string name="dialog_continue">CONTINUAR</string>
+    <string name="dialog_cancel">CANCELAR</string>
+    <string name="dialog_close">CERRAR</string>
+
+    <!-- Franco -->
+    <string name="holiday_dialog_title">Activar Modo Vacaciones</string>
+    <string name="holiday_dialog_message">Pedile a quien tiene el autenticador el código de 6 dígitos de AppLocker y justificale por qué lo necesitás.</string>
+    <string name="holiday_dialog_not_configured">Todavía no hay un autenticador para dar francos. Se configura en «Autenticador del Franco», dentro del estado de protección, mientras las reglas se puedan editar.</string>
+    <string name="holiday_activated">¡Código aceptado! Franco activado por 24 horas.</string>
+    <string name="code_label">Código de 6 dígitos</string>
+    <string name="code_wrong_length">El código tiene 6 números.</string>
+    <string name="code_invalid">Código incorrecto o ya usado. Intentos restantes: %1$d.</string>
+    <string name="code_locked_out">Demasiados intentos. Probá de nuevo en %1$d min.</string>
+    <string name="code_not_configured">No hay un autenticador configurado.</string>
+
+    <!-- Autenticador del franco -->
+    <string name="authenticator_title">Autenticador del Franco</string>
+    <string name="authenticator_current_code_message">Para reemplazar el autenticador, ingresá un código del que está configurado ahora.</string>
+    <string name="authenticator_scan_message">Quien va a dar los francos escanea este código con una app de autenticación (Google Authenticator, Microsoft Authenticator, Aegis…). Que no lo vea quien usa el bloqueo.</string>
+    <string name="authenticator_qr_description">Código QR para la app de autenticación</string>
+    <string name="authenticator_manual_key">Clave para cargarla a mano:</string>
+    <string name="authenticator_confirm_message">Para confirmar, ingresá el código que muestra la app.</string>
+    <string name="authenticator_confirm">CONFIRMAR</string>
+    <string name="authenticator_saved">Autenticador configurado.</string>
+    <string name="authenticator_code_mismatch">El código no coincide. Revisá que la hora de los dos teléfonos sea la correcta.</string>
+    <string name="authenticator_not_allowed">La primera vez solo se puede configurar mientras las reglas se pueden editar.</string>
+
+    <!-- Lista de apps -->
+    <string name="app_icon_description">Ícono de %1$s</string>
+
+    <!-- Pantalla de bloqueo -->
+    <string name="lock_screen_icon_description">Alerta</string>
+    <string name="lock_screen_title">¡APLICACIÓN BLOQUEADA!</string>
+    <string name="lock_screen_message">Estás en horario estricto.\nNo hay vuelta atrás, volvé a tus tareas.</string>
+    <string name="lock_screen_go_home">Ir a la pantalla de Inicio</string>
+
+    <!-- Avisos del sistema -->
+    <string name="admin_enabled">Modo estricto activado</string>
+    <string name="admin_disabled">Modo estricto desactivado</string>
+    <string name="boot_message">🛡️ AppLocker: Sistema de vigilancia reactivado tras reinicio.</string>
 </resources>

@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import java.util.Calendar
 
 private val Context.dataStore by preferencesDataStore(name = "applocker_prefs")
 
+/**
+ * Lectura y escritura de las preferencias con DataStore. Las claves no se deben renombrar: ya
+ * hay instalaciones con datos guardados con estos nombres.
+ */
 class DataStoreManager(private val context: Context) {
 
     companion object {
@@ -17,19 +19,16 @@ class DataStoreManager(private val context: Context) {
         val LOCK_START_TIME = stringPreferencesKey("lock_start_time")
         val LOCK_END_TIME = stringPreferencesKey("lock_end_time")
 
-        // Mantener la ventana de edición por si acaso, aunque usaremos el PIN
+        // Ventana de edición semanal
         val EDIT_DAY = intPreferencesKey("edit_day")
         val EDIT_START_TIME = stringPreferencesKey("edit_start_time")
         val EDIT_END_TIME = stringPreferencesKey("edit_end_time")
 
-        // --- NUEVOS: LÓGICA DE VACACIONES ---
-        // Guardamos hasta qué hora exacta (en milisegundos) dura el franco
+        // Fin del franco en epoch millis. El autenticador del franco se guarda en HolidayAuthStore.
+        // La clave "used_pins" la usaba la lista fija de PINs anterior y ya no se lee.
         val HOLIDAY_UNTIL_TIME = longPreferencesKey("holiday_until_time")
-        // Guardamos los pines que ya usó para bloquearlos
-        val USED_PINS = stringSetPreferencesKey("used_pins")
     }
 
-    // Setters
     suspend fun saveLockedApps(packageNames: Set<String>) { context.dataStore.edit { it[LOCKED_APPS] = packageNames } }
     suspend fun saveLockSchedule(days: Set<Int>, start: String, end: String) {
         context.dataStore.edit {
@@ -46,35 +45,10 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    // --- NUEVOS SETTERS ---
-    suspend fun activateHolidayMode() {
-        context.dataStore.edit { prefs ->
-            val calendar = Calendar.getInstance()
-            calendar.add(Calendar.DAY_OF_YEAR, 1) // Sumamos 24 horas exactas a partir de ahora
-            prefs[HOLIDAY_UNTIL_TIME] = calendar.timeInMillis
-        }
+    suspend fun saveHolidayUntil(untilMillis: Long) {
+        context.dataStore.edit { it[HOLIDAY_UNTIL_TIME] = untilMillis }
     }
 
-    suspend fun markPinAsUsed(pin: String) {
-        context.dataStore.edit { prefs ->
-            val currentUsed = prefs[USED_PINS] ?: emptySet()
-            prefs[USED_PINS] = currentUsed + pin
-        }
-    }
-
-    // Getters Reactivos (Flows)
-    val lockedAppsFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_APPS] ?: emptySet() }
-    val lockedDaysFlow: Flow<Set<String>> = context.dataStore.data.map { it[LOCKED_DAYS] ?: emptySet() }
-    val lockStartTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_START_TIME] ?: "00:00" }
-    val lockEndTimeFlow: Flow<String> = context.dataStore.data.map { it[LOCK_END_TIME] ?: "00:00" }
-
-    val editDayFlow: Flow<Int?> = context.dataStore.data.map { it[EDIT_DAY] }
-    val editStartTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_START_TIME] ?: "00:00" }
-    val editEndTimeFlow: Flow<String> = context.dataStore.data.map { it[EDIT_END_TIME] ?: "00:00" }
-
-    // --- NUEVOS GETTERS ---
-    // Nos devuelve hasta qué hora duran las vacaciones
-    val holidayUntilFlow: Flow<Long> = context.dataStore.data.map { it[HOLIDAY_UNTIL_TIME] ?: 0L }
-    // Nos devuelve la lista negra de pines usados
-    val usedPinsFlow: Flow<Set<String>> = context.dataStore.data.map { it[USED_PINS] ?: emptySet() }
+    /** Todas las preferencias; cada cambio emite una instantánea completa. */
+    val preferences: Flow<Preferences> = context.dataStore.data
 }
