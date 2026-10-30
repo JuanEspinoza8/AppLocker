@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -133,23 +134,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** La UI deshabilita la edición, pero la regla se valida acá contra la configuración guardada. */
+    private suspend fun canEditNow(): Boolean =
+        lockPolicy.isEditable(settingsRepository.settings.first())
+
     fun toggleAppLock(packageName: String) {
         viewModelScope.launch {
+            if (!canEditNow()) return@launch
             val currentLocked = _installedApps.value.filter { it.isLocked }.map { it.packageName }.toMutableSet()
             if (currentLocked.contains(packageName)) currentLocked.remove(packageName) else currentLocked.add(packageName)
             settingsRepository.saveLockedApps(currentLocked)
         }
     }
 
-    fun saveLockConfig(days: Set<Int>, start: String, end: String) {
+    /** Guarda el horario de bloqueo y la ventana de edición. [onResult] recibe `false` si no estaba permitido. */
+    fun saveRules(
+        lockDays: Set<Int>, lockStart: String, lockEnd: String,
+        editDay: Int?, editStart: String, editEnd: String,
+        onResult: (saved: Boolean) -> Unit,
+    ) {
         viewModelScope.launch {
-            settingsRepository.saveLockSchedule(days, TimeFormat.parse(start), TimeFormat.parse(end))
-        }
-    }
-
-    fun saveEditWindowConfig(day: Int?, start: String, end: String) {
-        viewModelScope.launch {
-            settingsRepository.saveEditWindow(day, TimeFormat.parse(start), TimeFormat.parse(end))
+            if (!canEditNow()) {
+                onResult(false)
+                return@launch
+            }
+            settingsRepository.saveLockSchedule(lockDays, TimeFormat.parse(lockStart), TimeFormat.parse(lockEnd))
+            settingsRepository.saveEditWindow(editDay, TimeFormat.parse(editStart), TimeFormat.parse(editEnd))
+            onResult(true)
         }
     }
 

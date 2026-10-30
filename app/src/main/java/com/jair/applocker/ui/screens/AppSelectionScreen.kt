@@ -21,6 +21,7 @@ fun AppSelectionScreen(viewModel: AppViewModel) {
     // Observamos el estado reactivo del ViewModel (tu gestor de estado)
     val apps by viewModel.installedApps.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isEditable by viewModel.isEditable.collectAsState()
 
     // Si está buscando las apps, mostramos un "spinner" de carga
     if (isLoading) {
@@ -33,6 +34,7 @@ fun AppSelectionScreen(viewModel: AppViewModel) {
             items(apps) { app ->
                 AppListItem(
                     app = app,
+                    enabled = isEditable,
                     // Cuando tocan el switch, le avisamos al ViewModel
                     onToggle = { viewModel.toggleAppLock(app.packageName) }
                 )
@@ -42,7 +44,7 @@ fun AppSelectionScreen(viewModel: AppViewModel) {
 }
 
 @Composable
-fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
+fun AppListItem(app: AppInfo, enabled: Boolean, onToggle: () -> Unit) {
     // Row es un contenedor que alinea elementos en horizontal (flex-direction: row)
     Row(
         modifier = Modifier
@@ -69,7 +71,8 @@ fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
         // El interruptor para bloquear/desbloquear
         Switch(
             checked = app.isLocked,
-            onCheckedChange = { onToggle() }
+            onCheckedChange = { onToggle() },
+            enabled = enabled
         )
     }
 }

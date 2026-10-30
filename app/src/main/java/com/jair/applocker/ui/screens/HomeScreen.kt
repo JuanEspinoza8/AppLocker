@@ -269,9 +269,10 @@ fun HomeScreen(
 
         Button(
             onClick = {
-                viewModel.saveLockConfig(selectedDays, lockStartTime, lockEndTime)
-                viewModel.saveEditWindowConfig(editWindowDay, editStartTime, editEndTime)
-                Toast.makeText(context, "¡Reglas guardadas y activadas! 🛡️", Toast.LENGTH_SHORT).show()
+                viewModel.saveRules(selectedDays, lockStartTime, lockEndTime, editWindowDay, editStartTime, editEndTime) { saved ->
+                    val message = if (saved) "¡Reglas guardadas y activadas! 🛡️" else "Fuera de la ventana de edición: no se guardaron los cambios."
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
             },
             enabled = isEditable,
             colors = ButtonDefaults.buttonColors(containerColor = NeonBlue, contentColor = PureBlack, disabledContainerColor = Color(0x1A00E5FF), disabledContentColor = Color.Gray),
