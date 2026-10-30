@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.jair.applocker.ui.components.DaysSelector
@@ -83,7 +82,7 @@ private fun ScheduleCard(
     GlassCard {
         SectionHeader(icon, title)
 
-        Text(daysLabel, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        Text(daysLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
         Spacer(modifier = Modifier.height(12.dp))
         DaysSelector(selectedDays, enabled, onDayClick)
 

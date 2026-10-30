@@ -15,16 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jair.applocker.domain.LockSettings
 import com.jair.applocker.ui.theme.GlassWhite
-import com.jair.applocker.ui.theme.NeonBlue
-import com.jair.applocker.ui.theme.NeonRed
-import com.jair.applocker.ui.theme.PureBlack
 import com.jair.applocker.ui.viewmodels.AppUiState
 
 @Composable
@@ -37,6 +33,7 @@ fun HomeScreen(
     val saved = uiState.settings
     val isEditable = uiState.isEditable
     val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
 
     var showPinDialog by remember { mutableStateOf(false) }
@@ -54,16 +51,16 @@ fun HomeScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(PureBlack).padding(16.dp).verticalScroll(scrollState),
+        modifier = Modifier.fillMaxSize().background(colors.background).padding(16.dp).verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        Icon(imageVector = Icons.Default.Shield, contentDescription = null, modifier = Modifier.size(64.dp), tint = NeonBlue)
+        Icon(imageVector = Icons.Default.Shield, contentDescription = null, modifier = Modifier.size(64.dp), tint = colors.primary)
         Text(
             text = "APPLOCKER",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Black,
-            color = Color.White,
+            color = colors.onBackground,
             letterSpacing = 2.sp,
             modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
         )
@@ -104,8 +101,8 @@ fun HomeScreen(
             onClick = { showPinDialog = true },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
-            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = Brush.horizontalGradient(listOf(NeonBlue, Color(0x3300E5FF))))
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = Brush.horizontalGradient(listOf(colors.primary, colors.primary.copy(alpha = 0.2f))))
         ) {
             Icon(Icons.Default.VpnKey, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
@@ -119,7 +116,7 @@ fun HomeScreen(
             enabled = isEditable,
             modifier = Modifier.fillMaxWidth().height(56.dp).background(GlassWhite, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White, disabledContentColor = Color.Gray),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.onBackground, disabledContentColor = colors.outline),
             border = ButtonDefaults.outlinedButtonBorder(enabled = isEditable).copy(width = 0.dp)
         ) {
             Icon(Icons.Default.AppBlocking, contentDescription = null)
@@ -141,7 +138,7 @@ fun HomeScreen(
                 }
             },
             enabled = isEditable,
-            colors = ButtonDefaults.buttonColors(containerColor = NeonBlue, contentColor = PureBlack, disabledContainerColor = Color(0x1A00E5FF), disabledContentColor = Color.Gray),
+            colors = ButtonDefaults.buttonColors(disabledContainerColor = colors.primary.copy(alpha = 0.1f), disabledContentColor = colors.outline),
             modifier = Modifier.fillMaxWidth().height(60.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -157,16 +154,17 @@ fun HomeScreen(
 /** Aviso de que las reglas no se pueden cambiar en este momento. */
 @Composable
 private fun LockedBanner() {
+    val colors = MaterialTheme.colorScheme
     Box(
         modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp).clip(RoundedCornerShape(20.dp))
-            .background(GlassWhite).border(1.dp, NeonRed, RoundedCornerShape(20.dp))
+            .background(GlassWhite).border(1.dp, colors.error, RoundedCornerShape(20.dp))
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.HourglassDisabled, contentDescription = null, tint = NeonRed, modifier = Modifier.size(40.dp))
+            Icon(Icons.Default.HourglassDisabled, contentDescription = null, tint = colors.error, modifier = Modifier.size(40.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("SISTEMA BLINDADO", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Text("Esperá a tu ventana de edición semanal o usá el botón de vacaciones.", color = Color.LightGray, fontSize = 13.sp, lineHeight = 18.sp)
+                Text("SISTEMA BLINDADO", color = colors.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                Text("Esperá a tu ventana de edición semanal o usá el botón de vacaciones.", color = colors.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp)
             }
         }
     }

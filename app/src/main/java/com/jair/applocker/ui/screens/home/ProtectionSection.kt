@@ -8,10 +8,10 @@ import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,7 +48,7 @@ fun ProtectionSection(isEditable: Boolean) {
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("ESTADO DE PROTECCIÓN", fontWeight = FontWeight.Black, color = Color.Gray, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.padding(start = 8.dp, bottom = 12.dp))
+        Text("ESTADO DE PROTECCIÓN", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.padding(start = 8.dp, bottom = 12.dp))
         PermissionGlassButton("Evitar Cierre por Batería", isBatteryExempt, isEditable && !isBatteryExempt) { requestBatteryExemption(context) }
         Spacer(modifier = Modifier.height(12.dp))
         PermissionGlassButton("Escudo Anti-Desinstalación", isAdminActive, isEditable && !isAdminActive) { requestDeviceAdmin(context) }
