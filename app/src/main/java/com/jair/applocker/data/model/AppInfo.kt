@@ -8,6 +8,4 @@ data class AppInfo(
     val packageName: String,
     val appName: String,
     val icon: Drawable,
-    /** Si el usuario la eligió para bloquear. */
-    var isLocked: Boolean = false
 )

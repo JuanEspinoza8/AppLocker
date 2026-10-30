@@ -6,33 +6,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.jair.applocker.data.model.AppInfo
-import com.jair.applocker.ui.viewmodels.AppViewModel
+import com.jair.applocker.ui.viewmodels.AppUiState
 
 @Composable
-fun AppSelectionScreen(viewModel: AppViewModel) {
-    val apps by viewModel.installedApps.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isEditable by viewModel.isEditable.collectAsState()
+fun AppSelectionScreen(uiState: AppUiState, onToggleApp: (packageName: String) -> Unit) {
+    val apps = uiState.installedApps
 
-    if (isLoading) {
+    if (apps == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(apps) { app ->
+            items(apps, key = { it.packageName }) { app ->
                 AppListItem(
                     app = app,
-                    enabled = isEditable,
-                    onToggle = { viewModel.toggleAppLock(app.packageName) }
+                    isLocked = app.packageName in uiState.settings.lockedApps,
+                    enabled = uiState.isEditable,
+                    onToggle = { onToggleApp(app.packageName) }
                 )
             }
         }
@@ -40,7 +37,7 @@ fun AppSelectionScreen(viewModel: AppViewModel) {
 }
 
 @Composable
-fun AppListItem(app: AppInfo, enabled: Boolean, onToggle: () -> Unit) {
+fun AppListItem(app: AppInfo, isLocked: Boolean, enabled: Boolean, onToggle: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -62,7 +59,7 @@ fun AppListItem(app: AppInfo, enabled: Boolean, onToggle: () -> Unit) {
         )
 
         Switch(
-            checked = app.isLocked,
+            checked = isLocked,
             onCheckedChange = { onToggle() },
             enabled = enabled
         )

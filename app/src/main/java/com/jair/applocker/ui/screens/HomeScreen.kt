@@ -36,9 +36,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.jair.applocker.domain.LockSettings
 import com.jair.applocker.domain.TimeFormat
 import com.jair.applocker.receivers.AdminReceiver
-import com.jair.applocker.ui.viewmodels.AppViewModel
+import com.jair.applocker.ui.viewmodels.AppUiState
 import java.time.LocalTime
 
 // --- COLORES PREMIER AMOLED / NEÓN ---
@@ -69,10 +70,13 @@ fun requestDeviceAdmin(context: Context) {
 
 @Composable
 fun HomeScreen(
-    viewModel: AppViewModel,
+    uiState: AppUiState,
+    onSaveRules: (rules: LockSettings, onResult: (saved: Boolean) -> Unit) -> Unit,
+    onActivateHoliday: (pin: String, onResult: (Boolean, String) -> Unit) -> Unit,
     onNavigateToAppList: () -> Unit,
-    isEditable: Boolean = true
 ) {
+    val saved = uiState.settings
+    val isEditable = uiState.isEditable
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -81,21 +85,13 @@ fun HomeScreen(
     var isAdminActive by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
 
-    // Obtenemos los datos desde el ViewModel
-    val savedLockedDays by viewModel.lockedDays.collectAsState()
-    val savedLockStart by viewModel.lockStartTime.collectAsState()
-    val savedLockEnd by viewModel.lockEndTime.collectAsState()
-    val savedEditDay by viewModel.editDay.collectAsState()
-    val savedEditStart by viewModel.editStartTime.collectAsState()
-    val savedEditEnd by viewModel.editEndTime.collectAsState()
-
-    // Variables locales
-    var selectedDays by remember(savedLockedDays) { mutableStateOf(savedLockedDays) }
-    var lockStartTime by remember(savedLockStart) { mutableStateOf(savedLockStart) }
-    var lockEndTime by remember(savedLockEnd) { mutableStateOf(savedLockEnd) }
-    var editWindowDay by remember(savedEditDay) { mutableStateOf(savedEditDay) }
-    var editStartTime by remember(savedEditStart) { mutableStateOf(savedEditStart) }
-    var editEndTime by remember(savedEditEnd) { mutableStateOf(savedEditEnd) }
+    // Copia editable de las reglas guardadas; se descarta si cambian las guardadas
+    var selectedDays by remember(saved.lockedDays) { mutableStateOf(saved.lockedDays) }
+    var lockStartTime by remember(saved.lockStart) { mutableStateOf(saved.lockStart) }
+    var lockEndTime by remember(saved.lockEnd) { mutableStateOf(saved.lockEnd) }
+    var editWindowDay by remember(saved.editDay) { mutableStateOf(saved.editDay) }
+    var editStartTime by remember(saved.editStart) { mutableStateOf(saved.editStart) }
+    var editEndTime by remember(saved.editEnd) { mutableStateOf(saved.editEnd) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -140,7 +136,7 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     if (pinInput.length == 4) {
-                        viewModel.attemptActivateHoliday(pinInput) { success, message ->
+                        onActivateHoliday(pinInput) { success, message ->
                             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             if (success) showPinDialog = false
                         }
@@ -168,7 +164,7 @@ fun HomeScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
         )
 
-        if (!isEditable) {
+        if (uiState.isLoaded && !isEditable) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp).clip(RoundedCornerShape(20.dp))
                     .background(GlassWhite).border(1.dp, NeonRed, RoundedCornerShape(20.dp))
@@ -270,8 +266,12 @@ fun HomeScreen(
 
         Button(
             onClick = {
-                viewModel.saveRules(selectedDays, lockStartTime, lockEndTime, editWindowDay, editStartTime, editEndTime) { saved ->
-                    val message = if (saved) "¡Reglas guardadas y activadas! 🛡️" else "Fuera de la ventana de edición: no se guardaron los cambios."
+                val rules = saved.copy(
+                    lockedDays = selectedDays, lockStart = lockStartTime, lockEnd = lockEndTime,
+                    editDay = editWindowDay, editStart = editStartTime, editEnd = editEndTime,
+                )
+                onSaveRules(rules) { ok ->
+                    val message = if (ok) "¡Reglas guardadas y activadas! 🛡️" else "Fuera de la ventana de edición: no se guardaron los cambios."
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             },
@@ -326,12 +326,11 @@ fun DaysSelector(selectedDays: Set<Int>, isEditable: Boolean, onDayClick: (Int) 
 }
 
 @Composable
-fun TimePickerButton(label: String, timeText: String, isEditable: Boolean, modifier: Modifier = Modifier, onTimeSelected: (String) -> Unit) {
+fun TimePickerButton(label: String, time: LocalTime, isEditable: Boolean, modifier: Modifier = Modifier, onTimeSelected: (LocalTime) -> Unit) {
     val context = LocalContext.current
     Box(contentAlignment = Alignment.Center, modifier = modifier.height(50.dp).clip(RoundedCornerShape(14.dp)).background(GlassWhite).clickable(enabled = isEditable) {
-        val current = TimeFormat.parse(timeText)
-        TimePickerDialog(context, { _, h, m -> onTimeSelected(TimeFormat.format(LocalTime.of(h, m))) }, current.hour, current.minute, true).show()
+        TimePickerDialog(context, { _, h, m -> onTimeSelected(LocalTime.of(h, m)) }, time.hour, time.minute, true).show()
     }.border(1.dp, if (isEditable) Color(0x1AFFFFFF) else Color.Transparent, RoundedCornerShape(14.dp))) {
-        Text("$label: $timeText", color = if (isEditable) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
+        Text("$label: ${TimeFormat.format(time)}", color = if (isEditable) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
     }
 }

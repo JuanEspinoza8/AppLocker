@@ -7,22 +7,31 @@ import com.jair.applocker.data.model.AppInfo
 import com.jair.applocker.data.repository.AppRepository
 import com.jair.applocker.data.repository.LockSettingsRepository
 import com.jair.applocker.domain.LockPolicy
-import com.jair.applocker.domain.TimeFormat
+import com.jair.applocker.domain.LockSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** Estado de las pantallas de configuración. */
+data class AppUiState(
+    /** `false` hasta que se lee la configuración guardada. */
+    val isLoaded: Boolean = false,
+    val settings: LockSettings = LockSettings(),
+    val isEditable: Boolean = false,
+    /** Apps instaladas, o `null` mientras se cargan. */
+    val installedApps: List<AppInfo>? = null,
+)
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AppRepository(application)
+    private val appRepository = AppRepository(application)
     private val settingsRepository = LockSettingsRepository(application)
     private val lockPolicy = LockPolicy()
 
@@ -40,74 +49,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "1189", "2312", "3535", "4758", "5081", "6304", "7527", "8750", "9973", "1296"
     )
 
-    private var usedPins: Set<String> = emptySet()
+    private val installedApps = MutableStateFlow<List<AppInfo>?>(null)
 
-    private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
-    val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // --- ESTADOS DE LA UI ---
-    private val _lockedDays = MutableStateFlow<Set<Int>>(emptySet())
-    val lockedDays: StateFlow<Set<Int>> = _lockedDays.asStateFlow()
-
-    private val _lockStartTime = MutableStateFlow("00:00")
-    val lockStartTime: StateFlow<String> = _lockStartTime.asStateFlow()
-
-    private val _lockEndTime = MutableStateFlow("00:00")
-    val lockEndTime: StateFlow<String> = _lockEndTime.asStateFlow()
-
-    // Ventana de Edición
-    private val _editDay = MutableStateFlow<Int?>(null)
-    val editDay: StateFlow<Int?> = _editDay.asStateFlow()
-
-    private val _editStartTime = MutableStateFlow("00:00")
-    val editStartTime: StateFlow<String> = _editStartTime.asStateFlow()
-
-    private val _editEndTime = MutableStateFlow("00:00")
-    val editEndTime: StateFlow<String> = _editEndTime.asStateFlow()
-
-    private val _isEditable = MutableStateFlow(true)
-    val isEditable: StateFlow<Boolean> = _isEditable.asStateFlow()
+    /**
+     * Se recalcula con cada cambio de configuración y al comienzo de cada minuto, para que la
+     * edición se cierre sola al terminar la ventana o el franco.
+     */
+    val uiState: StateFlow<AppUiState> = combine(
+        settingsRepository.settings,
+        installedApps,
+        minuteTicker(),
+    ) { settings, apps, _ ->
+        AppUiState(
+            isLoaded = true,
+            settings = settings,
+            isEditable = lockPolicy.isEditable(settings),
+            installedApps = apps,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppUiState())
 
     init {
-        loadApps()
-        loadSavedConfigAndEvaluate()
-    }
-
-    private fun loadApps() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val baseApps = repository.getInstalledApps()
-            settingsRepository.settings.map { it.lockedApps }.distinctUntilChanged().collect { lockedPackageNames ->
-                _installedApps.value = baseApps.map { app ->
-                    app.copy(isLocked = lockedPackageNames.contains(app.packageName))
-                }
-                _isLoading.value = false
-            }
-        }
-    }
-
-    private fun loadSavedConfigAndEvaluate() {
-        viewModelScope.launch {
-            settingsRepository.settings.collect { settings ->
-                _lockedDays.value = settings.lockedDays
-                _lockStartTime.value = TimeFormat.format(settings.lockStart)
-                _lockEndTime.value = TimeFormat.format(settings.lockEnd)
-                _editDay.value = settings.editDay
-                _editStartTime.value = TimeFormat.format(settings.editStart)
-                _editEndTime.value = TimeFormat.format(settings.editEnd)
-            }
-        }
-        // Se recalcula con cada cambio de configuración y con el paso del tiempo, para que
-        // la edición se cierre sola al terminar la ventana o el franco
-        viewModelScope.launch {
-            combine(settingsRepository.settings, minuteTicker()) { settings, _ -> lockPolicy.isEditable(settings) }
-                .distinctUntilChanged()
-                .collect { _isEditable.value = it }
-        }
-        viewModelScope.launch { settingsRepository.usedPins.collect { usedPins = it } }
+        viewModelScope.launch { installedApps.value = appRepository.getInstalledApps() }
     }
 
     /** Emite al suscribirse y después al comienzo de cada minuto. */
@@ -124,7 +86,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 onResult(false, "PIN inválido. Pedile uno a tu amigo.")
                 return@launch
             }
-            if (usedPins.contains(pin)) {
+            if (settingsRepository.usedPins.first().contains(pin)) {
                 onResult(false, "Este PIN ya fue utilizado. Pedí otro.")
                 return@launch
             }
@@ -135,31 +97,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** La UI deshabilita la edición, pero la regla se valida acá contra la configuración guardada. */
-    private suspend fun canEditNow(): Boolean =
-        lockPolicy.isEditable(settingsRepository.settings.first())
+    private suspend fun currentSettingsIfEditable(): LockSettings? =
+        settingsRepository.settings.first().takeIf { lockPolicy.isEditable(it) }
 
     fun toggleAppLock(packageName: String) {
         viewModelScope.launch {
-            if (!canEditNow()) return@launch
-            val currentLocked = _installedApps.value.filter { it.isLocked }.map { it.packageName }.toMutableSet()
-            if (currentLocked.contains(packageName)) currentLocked.remove(packageName) else currentLocked.add(packageName)
-            settingsRepository.saveLockedApps(currentLocked)
+            val lockedApps = currentSettingsIfEditable()?.lockedApps ?: return@launch
+            val updated = if (packageName in lockedApps) lockedApps - packageName else lockedApps + packageName
+            settingsRepository.saveLockedApps(updated)
         }
     }
 
-    /** Guarda el horario de bloqueo y la ventana de edición. [onResult] recibe `false` si no estaba permitido. */
-    fun saveRules(
-        lockDays: Set<Int>, lockStart: String, lockEnd: String,
-        editDay: Int?, editStart: String, editEnd: String,
-        onResult: (saved: Boolean) -> Unit,
-    ) {
+    /**
+     * Guarda el horario de bloqueo y la ventana de edición de [rules]. [onResult] recibe `false`
+     * si en este momento no se permite editar.
+     */
+    fun saveRules(rules: LockSettings, onResult: (saved: Boolean) -> Unit) {
         viewModelScope.launch {
-            if (!canEditNow()) {
+            if (currentSettingsIfEditable() == null) {
                 onResult(false)
                 return@launch
             }
-            settingsRepository.saveLockSchedule(lockDays, TimeFormat.parse(lockStart), TimeFormat.parse(lockEnd))
-            settingsRepository.saveEditWindow(editDay, TimeFormat.parse(editStart), TimeFormat.parse(editEnd))
+            settingsRepository.saveLockSchedule(rules.lockedDays, rules.lockStart, rules.lockEnd)
+            settingsRepository.saveEditWindow(rules.editDay, rules.editStart, rules.editEnd)
             onResult(true)
         }
     }
