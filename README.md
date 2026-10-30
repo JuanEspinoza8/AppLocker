@@ -10,10 +10,15 @@ Bloquea las apps que elijas en los días y horarios que definas. Para que el blo
 
 La desarrollé en marzo de 2026 para un amigo, que la usa en su Samsung Galaxy S23 Ultra (Android 16). No hay APK ni release publicado: se compila desde el código.
 
-<p>
-  <img src="docs/screenshots/01-inicio.jpeg" width="260" alt="Pantalla principal con el horario de bloqueo" />
-  <img src="docs/screenshots/02-proteccion.jpeg" width="260" alt="Ventana de edición y estado de protección" />
-</p>
+| Reglas activas | Estado de protección | App bloqueada |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/01-inicio.jpeg" width="240" alt="Pantalla principal con las reglas activas y la edición bloqueada" /> | <img src="docs/screenshots/02-proteccion.jpeg" width="240" alt="Ventana de edición y estado de protección con todos los permisos activos" /> | <img src="docs/screenshots/03-bloqueo.jpeg" width="240" alt="Pantalla roja de bloqueo al abrir una app elegida" /> |
+
+| Servicio apagado | Autenticador del franco | Pedir un franco |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/04-onboarding.jpeg" width="240" alt="Aviso para activar el servicio de accesibilidad" /> | <img src="docs/screenshots/05-autenticador.jpeg" width="240" alt="Código QR para configurar la app de autenticación" /> | <img src="docs/screenshots/06-franco.jpeg" width="240" alt="Diálogo para ingresar el código del franco" /> |
+
+<sub>Capturas de un emulador con Android 16 (API 36). El QR corresponde a una configuración de prueba.</sub>
 
 ---
 
