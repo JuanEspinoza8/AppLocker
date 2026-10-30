@@ -68,6 +68,9 @@ class LockerAccessibilityService : AccessibilityService() {
 
     // Calcula si estamos dentro de la Ventana de Edición o del PIN de Vacaciones
     private fun isSystemEditableNow(): Boolean {
+        // 0. Sin días de bloqueo configurados (app recién instalada) todo es editable
+        if (lockedDays.isEmpty()) return true
+
         // 1. ¿Está de vacaciones/franco?
         if (System.currentTimeMillis() < holidayUntil) return true
 
