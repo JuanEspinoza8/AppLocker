@@ -26,8 +26,6 @@ class LockSettingsRepository(
         .map { it.toLockSettings() }
         .distinctUntilChanged()
 
-    val usedPins: Flow<Set<String>> = dataStore.usedPinsFlow
-
     suspend fun saveLockedApps(packageNames: Set<String>) = dataStore.saveLockedApps(packageNames)
 
     suspend fun saveLockSchedule(days: Set<Int>, start: LocalTime, end: LocalTime) =
@@ -36,9 +34,8 @@ class LockSettingsRepository(
     suspend fun saveEditWindow(day: Int?, start: LocalTime, end: LocalTime) =
         dataStore.saveEditWindow(day, TimeFormat.format(start), TimeFormat.format(end))
 
-    /** Marca el PIN como usado y habilita la edición durante las próximas 24 horas. */
-    suspend fun activateHoliday(pin: String) {
-        dataStore.markPinAsUsed(pin)
+    /** Habilita la edición durante las próximas 24 horas. */
+    suspend fun activateHoliday() {
         dataStore.saveHolidayUntil(ZonedDateTime.now(clock).plusDays(1).toInstant().toEpochMilli())
     }
 }

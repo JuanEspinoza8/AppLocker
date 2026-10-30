@@ -31,6 +31,7 @@
     <string name="protection_accessibility">Servicio de Accesibilidad</string>
     <string name="protection_battery">Evitar Cierre por Batería</string>
     <string name="protection_admin">Escudo Anti-Desinstalación</string>
+    <string name="protection_holiday_authenticator">Autenticador del Franco</string>
     <string name="device_admin_explanation">Protección esencial.</string>
     <string name="holiday_button">PEDIR FRANCO (VACACIONES)</string>
     <string name="select_apps_button">SELECCIONAR APPS</string>
@@ -38,16 +39,34 @@
     <string name="rules_saved">¡Reglas guardadas y activadas! 🛡️</string>
     <string name="rules_not_editable">Fuera de la ventana de edición: no se guardaron los cambios.</string>
 
+    <!-- Diálogos -->
+    <string name="dialog_activate">ACTIVAR</string>
+    <string name="dialog_continue">CONTINUAR</string>
+    <string name="dialog_cancel">CANCELAR</string>
+    <string name="dialog_close">CERRAR</string>
+
     <!-- Franco -->
-    <string name="pin_dialog_title">Activar Modo Vacaciones</string>
-    <string name="pin_dialog_message">Pedile un PIN de 4 dígitos a tu amigo y justificale por qué lo necesitás.</string>
-    <string name="pin_dialog_label">PIN de 4 dígitos</string>
-    <string name="pin_dialog_confirm">ACTIVAR</string>
-    <string name="pin_dialog_cancel">CANCELAR</string>
-    <string name="pin_wrong_length">El PIN debe tener 4 números.</string>
-    <string name="pin_invalid">PIN inválido. Pedile uno a tu amigo.</string>
-    <string name="pin_already_used">Este PIN ya fue utilizado. Pedí otro.</string>
-    <string name="holiday_activated">¡PIN Aceptado! Franco activado por 24 horas.</string>
+    <string name="holiday_dialog_title">Activar Modo Vacaciones</string>
+    <string name="holiday_dialog_message">Pedile a quien tiene el autenticador el código de 6 dígitos de AppLocker y justificale por qué lo necesitás.</string>
+    <string name="holiday_dialog_not_configured">Todavía no hay un autenticador para dar francos. Se configura en «Autenticador del Franco», dentro del estado de protección, mientras las reglas se puedan editar.</string>
+    <string name="holiday_activated">¡Código aceptado! Franco activado por 24 horas.</string>
+    <string name="code_label">Código de 6 dígitos</string>
+    <string name="code_wrong_length">El código tiene 6 números.</string>
+    <string name="code_invalid">Código incorrecto o ya usado. Intentos restantes: %1$d.</string>
+    <string name="code_locked_out">Demasiados intentos. Probá de nuevo en %1$d min.</string>
+    <string name="code_not_configured">No hay un autenticador configurado.</string>
+
+    <!-- Autenticador del franco -->
+    <string name="authenticator_title">Autenticador del Franco</string>
+    <string name="authenticator_current_code_message">Para reemplazar el autenticador, ingresá un código del que está configurado ahora.</string>
+    <string name="authenticator_scan_message">Quien va a dar los francos escanea este código con una app de autenticación (Google Authenticator, Microsoft Authenticator, Aegis…). Que no lo vea quien usa el bloqueo.</string>
+    <string name="authenticator_qr_description">Código QR para la app de autenticación</string>
+    <string name="authenticator_manual_key">Clave para cargarla a mano:</string>
+    <string name="authenticator_confirm_message">Para confirmar, ingresá el código que muestra la app.</string>
+    <string name="authenticator_confirm">CONFIRMAR</string>
+    <string name="authenticator_saved">Autenticador configurado.</string>
+    <string name="authenticator_code_mismatch">El código no coincide. Revisá que la hora de los dos teléfonos sea la correcta.</string>
+    <string name="authenticator_not_allowed">La primera vez solo se puede configurar mientras las reglas se pueden editar.</string>
 
     <!-- Lista de apps -->
     <string name="app_icon_description">Ícono de %1$s</string>

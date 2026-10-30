@@ -54,9 +54,17 @@ fun rememberProtectionStatus(): ProtectionStatus {
     return status
 }
 
-/** Sección 3: estado de cada permiso, con acceso directo a la pantalla de Android que lo otorga. */
+/**
+ * Sección 3: estado de cada permiso, con acceso directo a la pantalla de Android que lo otorga, y
+ * del autenticador del franco.
+ */
 @Composable
-fun ProtectionSection(status: ProtectionStatus, isEditable: Boolean) {
+fun ProtectionSection(
+    status: ProtectionStatus,
+    isEditable: Boolean,
+    isHolidayConfigured: Boolean,
+    onConfigureHoliday: () -> Unit,
+) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -67,6 +75,9 @@ fun ProtectionSection(status: ProtectionStatus, isEditable: Boolean) {
         PermissionGlassButton(stringResource(R.string.protection_battery), status.isBatteryExempt, isEditable && !status.isBatteryExempt) { requestBatteryExemption(context) }
         Spacer(modifier = Modifier.height(12.dp))
         PermissionGlassButton(stringResource(R.string.protection_admin), status.isAdminActive, isEditable && !status.isAdminActive) { requestDeviceAdmin(context) }
+        Spacer(modifier = Modifier.height(12.dp))
+        // Reemplazar un autenticador existente pide un código suyo, así que se puede tocar siempre
+        PermissionGlassButton(stringResource(R.string.protection_holiday_authenticator), isHolidayConfigured, isHolidayConfigured || isEditable, onConfigureHoliday)
     }
 }
 

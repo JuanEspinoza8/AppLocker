@@ -21,16 +21,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jair.applocker.R
+import com.jair.applocker.domain.CodeCheck
 import com.jair.applocker.domain.LockSettings
 import com.jair.applocker.ui.theme.GlassWhite
 import com.jair.applocker.ui.viewmodels.AppUiState
-import com.jair.applocker.ui.viewmodels.HolidayResult
+import com.jair.applocker.ui.viewmodels.SetupStart
 
 @Composable
 fun HomeScreen(
     uiState: AppUiState,
     onSaveRules: (rules: LockSettings, onResult: (saved: Boolean) -> Unit) -> Unit,
-    onActivateHoliday: (pin: String, onResult: (HolidayResult) -> Unit) -> Unit,
+    onActivateHoliday: (code: String, onResult: (CodeCheck) -> Unit) -> Unit,
+    onBeginAuthenticatorSetup: (currentCode: String?, onResult: (SetupStart) -> Unit) -> Unit,
+    onConfirmAuthenticatorSetup: (code: String, onResult: (saved: Boolean) -> Unit) -> Unit,
+    onCancelAuthenticatorSetup: () -> Unit,
     onNavigateToAppList: () -> Unit,
 ) {
     val saved = uiState.settings
@@ -40,7 +44,8 @@ fun HomeScreen(
     val scrollState = rememberScrollState()
     val protection = rememberProtectionStatus()
 
-    var showPinDialog by remember { mutableStateOf(false) }
+    var showHolidayDialog by remember { mutableStateOf(false) }
+    var showAuthenticatorSetup by remember { mutableStateOf(false) }
 
     // Copia editable de las reglas guardadas; se descarta si cambian las guardadas
     var selectedDays by remember(saved.lockedDays) { mutableStateOf(saved.lockedDays) }
@@ -50,8 +55,24 @@ fun HomeScreen(
     var editStartTime by remember(saved.editStart) { mutableStateOf(saved.editStart) }
     var editEndTime by remember(saved.editEnd) { mutableStateOf(saved.editEnd) }
 
-    if (showPinDialog) {
-        PinDialog(onDismiss = { showPinDialog = false }, onActivateHoliday = onActivateHoliday)
+    if (showHolidayDialog) {
+        HolidayCodeDialog(
+            isConfigured = uiState.isHolidayConfigured,
+            onDismiss = { showHolidayDialog = false },
+            onActivateHoliday = onActivateHoliday,
+        )
+    }
+
+    if (showAuthenticatorSetup) {
+        AuthenticatorSetupDialog(
+            isConfigured = uiState.isHolidayConfigured,
+            onBegin = onBeginAuthenticatorSetup,
+            onConfirm = onConfirmAuthenticatorSetup,
+            onDismiss = {
+                onCancelAuthenticatorSetup()
+                showAuthenticatorSetup = false
+            },
+        )
     }
 
     Column(
@@ -101,12 +122,17 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ProtectionSection(protection, isEditable)
+        ProtectionSection(
+            status = protection,
+            isEditable = isEditable,
+            isHolidayConfigured = uiState.isHolidayConfigured,
+            onConfigureHoliday = { showAuthenticatorSetup = true },
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedButton(
-            onClick = { showPinDialog = true },
+            onClick = { showHolidayDialog = true },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),

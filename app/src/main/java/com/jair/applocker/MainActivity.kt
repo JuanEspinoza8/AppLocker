@@ -41,6 +41,9 @@ class MainActivity : ComponentActivity() {
                                 uiState = uiState,
                                 onSaveRules = viewModel::saveRules,
                                 onActivateHoliday = viewModel::attemptActivateHoliday,
+                                onBeginAuthenticatorSetup = viewModel::beginAuthenticatorSetup,
+                                onConfirmAuthenticatorSetup = viewModel::confirmAuthenticatorSetup,
+                                onCancelAuthenticatorSetup = viewModel::cancelAuthenticatorSetup,
                                 onNavigateToAppList = { navController.navigate("appList") }
                             )
                         }

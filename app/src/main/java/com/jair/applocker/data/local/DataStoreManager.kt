@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "applocker_prefs")
 
@@ -25,9 +24,9 @@ class DataStoreManager(private val context: Context) {
         val EDIT_START_TIME = stringPreferencesKey("edit_start_time")
         val EDIT_END_TIME = stringPreferencesKey("edit_end_time")
 
-        // Franco: fin en epoch millis y PINs ya usados (cada uno sirve una sola vez)
+        // Fin del franco en epoch millis. El autenticador del franco se guarda en HolidayAuthStore.
+        // La clave "used_pins" la usaba la lista fija de PINs anterior y ya no se lee.
         val HOLIDAY_UNTIL_TIME = longPreferencesKey("holiday_until_time")
-        val USED_PINS = stringSetPreferencesKey("used_pins")
     }
 
     suspend fun saveLockedApps(packageNames: Set<String>) { context.dataStore.edit { it[LOCKED_APPS] = packageNames } }
@@ -50,15 +49,6 @@ class DataStoreManager(private val context: Context) {
         context.dataStore.edit { it[HOLIDAY_UNTIL_TIME] = untilMillis }
     }
 
-    suspend fun markPinAsUsed(pin: String) {
-        context.dataStore.edit { prefs ->
-            val currentUsed = prefs[USED_PINS] ?: emptySet()
-            prefs[USED_PINS] = currentUsed + pin
-        }
-    }
-
     /** Todas las preferencias; cada cambio emite una instantánea completa. */
     val preferences: Flow<Preferences> = context.dataStore.data
-
-    val usedPinsFlow: Flow<Set<String>> = context.dataStore.data.map { it[USED_PINS] ?: emptySet() }
 }
