@@ -25,7 +25,8 @@ fun AppSelectionScreen(uiState: AppUiState, onToggleApp: (packageName: String) -
             CircularProgressIndicator()
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        // Desde Android 15 la app se dibuja detrás de las barras del sistema
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = WindowInsets.systemBars.asPaddingValues()) {
             items(apps, key = { it.packageName }) { app ->
                 AppListItem(
                     app = app,
