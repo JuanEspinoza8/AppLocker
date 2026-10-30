@@ -36,9 +36,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.jair.applocker.domain.TimeFormat
 import com.jair.applocker.receivers.AdminReceiver
 import com.jair.applocker.ui.viewmodels.AppViewModel
-import java.util.Calendar
+import java.time.LocalTime
 
 // --- COLORES PREMIER AMOLED / NEÓN ---
 val PureBlack = Color(0xFF000000)
@@ -328,8 +329,8 @@ fun DaysSelector(selectedDays: Set<Int>, isEditable: Boolean, onDayClick: (Int) 
 fun TimePickerButton(label: String, timeText: String, isEditable: Boolean, modifier: Modifier = Modifier, onTimeSelected: (String) -> Unit) {
     val context = LocalContext.current
     Box(contentAlignment = Alignment.Center, modifier = modifier.height(50.dp).clip(RoundedCornerShape(14.dp)).background(GlassWhite).clickable(enabled = isEditable) {
-        val calendar = Calendar.getInstance()
-        TimePickerDialog(context, { _, h, m -> onTimeSelected(String.format("%02d:%02d", h, m)) }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
+        val current = TimeFormat.parse(timeText)
+        TimePickerDialog(context, { _, h, m -> onTimeSelected(TimeFormat.format(LocalTime.of(h, m))) }, current.hour, current.minute, true).show()
     }.border(1.dp, if (isEditable) Color(0x1AFFFFFF) else Color.Transparent, RoundedCornerShape(14.dp))) {
         Text("$label: $timeText", color = if (isEditable) Color.White else Color.Gray, fontWeight = FontWeight.Bold)
     }
