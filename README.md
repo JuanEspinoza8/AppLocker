@@ -6,7 +6,7 @@
 ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 ![Estado](https://img.shields.io/badge/estado-uso%20personal%2C%20sin%20release-lightgrey?style=flat-square)
 
-Bloquea las apps que elijas en los días y horarios que definas. Para que el bloqueo no se desactive en un momento de debilidad, las reglas solo se pueden cambiar en una ventana semanal o con un PIN de un solo uso que tiene otra persona.
+Bloquea las apps que elijas en los días y horarios que definas. Para que el bloqueo no se desactive en un momento de debilidad, las reglas solo se pueden cambiar en una ventana semanal o con un código de un solo uso que dicta otra persona desde su app de autenticación.
 
 La desarrollé en marzo de 2026 para un amigo, que la usa en su Samsung Galaxy S23 Ultra (Android 16). No hay APK ni release publicado: se compila desde el código.
 
@@ -23,7 +23,7 @@ La desarrollé en marzo de 2026 para un amigo, que la usa en su Samsung Galaxy S
 - **Horario de bloqueo:** días de la semana y una franja horaria. La franja puede cruzar la medianoche: lunes 22:00–07:00 va del lunes a las 22:00 al martes a las 07:00.
 - **Pantalla de bloqueo:** si se abre una app elegida dentro del horario, se muestra encima una pantalla roja (una `Activity`). El botón Atrás no hace nada; la única salida es volver al inicio.
 - **Ventana de edición semanal:** un día y una franja en los que se pueden cambiar las reglas. Fuera de ella la configuración queda de solo lectura y **Ajustes de Android también se bloquea**, para que no se pueda apagar el servicio ni quitar el administrador del dispositivo.
-- **Franco:** un PIN de 4 dígitos, que sirve una sola vez, habilita la edición y el acceso a Ajustes durante 24 horas. No levanta el bloqueo de las apps por sí solo: da tiempo para cambiar las reglas.
+- **Franco:** un código TOTP de 6 dígitos habilita la edición y el acceso a Ajustes durante 24 horas. No levanta el bloqueo de las apps por sí solo: da tiempo para cambiar las reglas. Quien da los francos lo lee en su app de autenticación (Google Authenticator, Aegis, etc.), después de escanear una sola vez un QR que muestra AppLocker.
 - **Onboarding:** si el servicio de accesibilidad está apagado, la app lo avisa y lleva directo a activarlo.
 - **Protección opcional:** excepción de optimización de batería y administrador del dispositivo (mientras está activo, Android no deja desinstalar la app).
 
@@ -46,6 +46,11 @@ La desarrollé en marzo de 2026 para un amigo, que la usa en su Samsung Galaxy S
 
   Si no se cumple ninguna, se bloquea Ajustes (`com.android.settings` y `com.samsung.android.settings`). Aparte, las apps elegidas se bloquean mientras el horario de bloqueo esté activo.
 - **`LockSettingsRepository`** envuelve a DataStore y expone toda la configuración como un único `Flow<LockSettings>`. Lo usan el servicio y el ViewModel.
+- **`HolidayCodeRepository`** maneja el autenticador del franco:
+  - Códigos TOTP (RFC 6238: HMAC-SHA1, 6 dígitos, pasos de 30 segundos), con un paso de tolerancia por desfasaje de reloj.
+  - El secreto se genera en el teléfono, se cifra con una clave AES-GCM del Android Keystore (no se puede exportar) y se guarda en un DataStore aparte, excluido de los backups.
+  - Cada código sirve una sola vez. Después de 5 intentos fallidos, los intentos se bloquean durante 30 minutos.
+  - La primera configuración solo se permite mientras las reglas son editables. Para reemplazar el autenticador hace falta un código válido del actual.
 - **`AppViewModel`** combina la configuración, las apps instaladas y un ticker por minuto en un `AppUiState` (`combine` + `stateIn`). Así la edición se cierra sola cuando termina la ventana aunque la app quede abierta. Antes de guardar, vuelve a validar que la edición esté permitida: no depende solo de que la UI deshabilite los botones.
 
 ```
@@ -89,7 +94,8 @@ El APK queda en `app/build/outputs/apk/debug/`. En Windows, usá `gradlew.bat`.
 2. Abrí AppLocker y tocá **ACTIVAR SERVICIO**. En Ajustes → Accesibilidad → AppLocker, activá el servicio.
    - En Android 13 o superior, las apps instaladas fuera de Play Store tienen *ajustes restringidos*: si el interruptor aparece gris, andá a Ajustes → Apps → AppLocker → ⋮ → **Permitir ajustes restringidos** y volvé a intentar.
 3. Recién instalada, todo es editable (Regla 0). Elegí las apps, el horario y la ventana de edición, activá la protección de batería y el administrador, y tocá **GUARDAR REGLAS**.
-4. A partir de ahí, las reglas solo se cambian dentro de la ventana de edición o con un PIN de franco.
+4. Quien va a dar los francos toca **Autenticador del Franco**, escanea el QR con su app de autenticación y confirma con el código que le muestra. Conviene que quien usa el bloqueo no vea el QR.
+5. A partir de ahí, las reglas solo se cambian dentro de la ventana de edición o con un código de franco.
 
 ### Tests
 
@@ -97,6 +103,8 @@ El APK queda en `app/build/outputs/apk/debug/`. En Windows, usá `gradlew.bat`.
 
 - `LockPolicy`: Regla 0, domingo = 7, límites exactos de la franja, cruce de medianoche, ventana de edición y franco activo y vencido.
 - `TimeFormat`: lectura y escritura de `HH:mm`.
+- `Totp` y `Base32`: vectores de prueba de RFC 6238 y RFC 4648, tolerancia de reloj y códigos ya usados.
+- `AttemptLimiter` y la verificación de códigos: un código sirve una vez, 5 fallos bloquean los intentos y un secreto ilegible obliga a configurar de nuevo.
 - El mapeo de las preferencias guardadas a `LockSettings`, para no romper instalaciones existentes.
 
 ## Limitaciones
@@ -106,7 +114,9 @@ El APK queda en `app/build/outputs/apk/debug/`. En Windows, usá `gradlew.bat`.
 - **Otros fabricantes:** solo se bloquean los paquetes de Ajustes de Android y de Samsung. En otras marcas, Ajustes puede usar otro paquete.
 - **Bloqueo reactivo:** la app bloqueada llega a abrirse un instante antes de que aparezca la pantalla de bloqueo.
 - **Precisión de minuto:** las franjas incluyen el minuto de inicio y el de fin (09:00–17:00 bloquea hasta las 17:00:59).
-- **PINs de franco:** son una lista fija en el código (`AppViewModel`) y quedaron públicos en este repositorio. Está pendiente reemplazarlos por un mecanismo que no dependa de un secreto en el código.
+- **Configuración del autenticador:** si quien usa el bloqueo ve el QR o la clave cuando se configura, puede darse francos a sí mismo.
+- **Autenticador perdido:** si quien da los francos pierde su app de autenticación, durante la ventana de edición hay que desactivar el administrador del dispositivo, borrar los datos de AppLocker y volver a configurar todo.
+- **Hora del teléfono:** los códigos dependen de la hora. Si la del teléfono está muy corrida, los códigos no coinciden. Para cambiar la hora hay que entrar a Ajustes, que está bloqueado fuera de la ventana de edición.
 - No es una herramienta de control parental: sirve para quien quiere autolimitarse. Con suficiente insistencia (modo seguro, ADB, restablecer el teléfono) se puede saltear.
 
 ### Sobre el nombre del paquete
@@ -126,6 +136,8 @@ El `applicationId` es `com.jair.applocker`. No se cambió porque la app ya está
   <img src="https://img.shields.io/badge/Coroutines_y_Flow-0095D5?style=for-the-badge&logo=kotlin&logoColor=white" alt="Coroutines y Flow" />
   <img src="https://img.shields.io/badge/Accessibility_Service-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Accessibility Service" />
   <img src="https://img.shields.io/badge/Device_Admin-4285F4?style=for-the-badge&logo=android&logoColor=white" alt="Device Admin" />
+  <img src="https://img.shields.io/badge/Android_Keystore-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android Keystore" />
+  <img src="https://img.shields.io/badge/TOTP_(RFC_6238)-555555?style=for-the-badge" alt="TOTP (RFC 6238)" />
   <img src="https://img.shields.io/badge/JUnit-25A162?style=for-the-badge&logo=junit5&logoColor=white" alt="JUnit" />
 </p>
 
