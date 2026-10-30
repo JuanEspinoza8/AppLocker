@@ -14,7 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jair.applocker.ui.screens.AppSelectionScreen
-import com.jair.applocker.ui.screens.HomeScreen
+import com.jair.applocker.ui.screens.home.HomeScreen
 import com.jair.applocker.ui.theme.AppLockerTheme
 import com.jair.applocker.ui.viewmodels.AppViewModel
 
