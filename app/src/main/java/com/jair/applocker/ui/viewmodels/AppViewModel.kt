@@ -26,7 +26,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsRepository = LockSettingsRepository(application)
     private val lockPolicy = LockPolicy()
 
-    // Lista maestra de 100 PINes (No tocar)
+    // PINs de un solo uso que habilitan el franco
     private val masterPins = setOf(
         "1408", "2731", "3954", "4170", "5092", "6315", "7538", "8761", "9984", "1207",
         "2430", "3653", "4876", "5190", "6413", "7636", "8859", "9082", "1305", "2528",

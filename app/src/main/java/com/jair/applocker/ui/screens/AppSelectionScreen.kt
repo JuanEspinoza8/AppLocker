@@ -18,24 +18,20 @@ import com.jair.applocker.ui.viewmodels.AppViewModel
 
 @Composable
 fun AppSelectionScreen(viewModel: AppViewModel) {
-    // Observamos el estado reactivo del ViewModel (tu gestor de estado)
     val apps by viewModel.installedApps.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isEditable by viewModel.isEditable.collectAsState()
 
-    // Si está buscando las apps, mostramos un "spinner" de carga
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
-        // LazyColumn es el equivalente a hacer un .map() en un div con scroll en web
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(apps) { app ->
                 AppListItem(
                     app = app,
                     enabled = isEditable,
-                    // Cuando tocan el switch, le avisamos al ViewModel
                     onToggle = { viewModel.toggleAppLock(app.packageName) }
                 )
             }
@@ -45,14 +41,12 @@ fun AppSelectionScreen(viewModel: AppViewModel) {
 
 @Composable
 fun AppListItem(app: AppInfo, enabled: Boolean, onToggle: () -> Unit) {
-    // Row es un contenedor que alinea elementos en horizontal (flex-direction: row)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Convertimos el ícono nativo de Android a un formato que la UI entienda
         Image(
             bitmap = app.icon.toBitmap().asImageBitmap(),
             contentDescription = "Ícono de ${app.appName}",
@@ -61,14 +55,12 @@ fun AppListItem(app: AppInfo, enabled: Boolean, onToggle: () -> Unit) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // El nombre de la aplicación ocupa el espacio sobrante
         Text(
             text = app.appName,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge
         )
 
-        // El interruptor para bloquear/desbloquear
         Switch(
             checked = app.isLocked,
             onCheckedChange = { onToggle() },

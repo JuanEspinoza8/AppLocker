@@ -8,24 +8,22 @@ import kotlinx.coroutines.withContext
 
 class AppRepository(private val context: Context) {
 
-    // 'suspend' indica que esta función es asíncrona.
-    // Dispatchers.IO asegura que el trabajo pesado no congele la interfaz.
+    /**
+     * Apps instaladas que tienen ícono en el launcher, ordenadas por nombre. Corre en
+     * [Dispatchers.IO] porque cargar etiquetas e íconos es lento.
+     */
     suspend fun getInstalledApps(): List<AppInfo> = withContext(Dispatchers.IO) {
         val packageManager = context.packageManager
         val appsList = mutableListOf<AppInfo>()
 
-        // Pedimos TODAS las apps instaladas en el S23 Ultra
         val packages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
 
         for (appInfo in packages) {
-            // Un celular tiene cientos de procesos de sistema invisibles.
-            // Con esta condición, filtramos SOLO las apps que se pueden abrir
-            // y tienen un ícono en el menú (redes sociales, juegos, utilidades).
+            // Se descartan servicios y procesos del sistema que no se pueden abrir
             if (packageManager.getLaunchIntentForPackage(appInfo.packageName) != null) {
                 val name = packageManager.getApplicationLabel(appInfo).toString()
                 val icon = packageManager.getApplicationIcon(appInfo)
 
-                // Creamos nuestro objeto AppInfo y lo metemos en la lista
                 appsList.add(
                     AppInfo(
                         packageName = appInfo.packageName,
@@ -36,7 +34,6 @@ class AppRepository(private val context: Context) {
             }
         }
 
-        // Devolvemos la lista ordenada alfabéticamente para que sea fácil de leer
         return@withContext appsList.sortedBy { it.appName.lowercase() }
     }
 }
